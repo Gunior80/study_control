@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+
+{% block head %} {% endblock %}
+
+
+{% block body %}
+<div class="container">
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link active" data-toggle="tab" href="#about">О курсе</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#groups">Группы</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#statistic">Статистика курса</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'course_edit' slug=course.slug %}">Редактировать</a>
+  </li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="about">
+    <h3>{{ course.name }}</h3>
+  <br/>
+  <div class="row">
+    <div class="col col-lg-3">
+        <img width="200px" src="{{ course.image.url }}" alt="Превью">
+    </div>
+    <div class="col-6">
+        <h4>Описание курса</h4>
+        {{ course.description }}
+    </div>
+  </div>
+  <br/>
+  <div class="row">
+    <div class="col col-lg-3 text-center">
+      {% if groups|length > 0 %}
+        <h5>Текущие наборы:</h5>
+        {% for group in group %}
+          <div>Дата начала</div>
+          <div>{{ group.study_start }}</div>
+          <button type="submit" class="btn btn-primary">Подать заявку</button>
+          <br/>
+        {% endfor %}
+      {% else %}
+        <div>В данный момент набор на курс не ведется.</div>
+      {% endif %}
+    </div>
+    <div class="col-6">
+        <h4>Дисциплины курса:</h4>
+        <ul>
+        {% for discipline in course.disciplines.all %}
+            <li>{{ discipline.name }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+  </div>
+  </div>
+  <div class="tab-pane fade" id="groups">
+
+  </div>
+  <div class="tab-pane fade" id="statistic">
+    Отзывы...
+  </div>
+</div>
+
+</div>
+{% endblock %}

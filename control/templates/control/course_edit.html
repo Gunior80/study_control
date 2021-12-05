@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load poll_extras %}
+{% load crispy_forms_tags %}
+
+{% block head %} {% endblock %}
+
+
+{% block body %}
+<div class="container">
+  <form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+    {{ form.slug.as_hidden }}
+    <div class="row">
+      {% if course %}
+      <div class="col col-lg-3"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
+      {% else %}
+      <div class="col col-lg-3"><button type="submit" class="btn btn-primary">Сохранить</button></div>
+      {% endif %}
+      <div class="col-6 text-right"><h3>{{ form.name|as_crispy_field }}</h3></div>
+    </div>
+  <br/>
+  <div class="row">
+    <div class="col col-lg-3">
+      {% if course %}
+        <img src="{{ course.image.url}}" alt="connect" style="width:200px">
+      {% endif %}
+      {{ form.image|as_crispy_field }}
+    </div>
+    <div class="col-6">
+        <h4>Описание курса</h4>
+        {{ form.description|as_crispy_field }}
+    </div>
+  </div>
+  <br/>
+  <div class="row">
+    <div class="col col-lg-3 text-center">
+      {% if course.groups.all|length > 0 %}
+        <h5>Текущие наборы:</h5>
+        {% for group in course.groups.all %}
+          <div>Группы курса</div>
+          <div>{{ group.name }}</div>
+          <br/>
+        {% endfor %}
+      {% else %}
+        <div>В данный момент набор на курс не ведется.</div>
+      {% endif %}
+    </div>
+    <div class="col-6">
+        <h4>Дисциплины курса:</h4>
+        <ul>
+        {% for discipline in course.disciplines.all %}
+            <li>{{ discipline.name }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+  </div>
+  </form>
+</div>
+{% endblock %}

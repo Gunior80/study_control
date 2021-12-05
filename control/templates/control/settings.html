@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% load crispy_forms_tags %}
+
+
+{% block head %}
+  <script src="{% static 'js/highcharts.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.dataTables.min.css' %}" />
+  <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
+{% endblock %}
+
+
+{% block body %}
+<div class="container">
+  <h3>Настройки площадки</h3>
+  <ul class="nav nav-tabs">
+    <li class="nav-item">
+    <a class="nav-link active" data-toggle="tab" href="#dashboard">Статистика системы</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#users">Пользователи</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#groups">Группы</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#courses">Курсы</a>
+    </li>
+  </ul>
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="dashboard">Статистика системы</div>
+    <div class="tab-pane fade" id="users">
+      <br/>
+      <div class="text-right"><td><a href="{% url 'user_add' %}" class="btn btn-primary">Создать</a></td></div>
+      <br/>
+      <table id="user-table" class="table table-striped table-bordered sortable">
+        <thead>
+          <tr>
+            <th class="th-sm">ФИО</th>
+            <th class="th-sm">Ученик</th>
+            <th class="th-sm">Последнее посещение</th>
+            <th class="th-sm">Текущие курсы</th>
+            <th class="th-sm">Редактировать</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for user in users %}
+          <tr>
+            <td>{{ user.last_name }} {{ user.first_name }} {{ user.profile.patronymic }}</td>
+            <td>{% if user.is_staff %} Нет {% else %} Да {% endif %}</td>
+            <td>{{ user.last_login }}</td>
+            <td>{% for group in user.group.all %}{{ group.course }} {% endfor %}</td>
+            <td><a href="{% url 'user_edit' pk=user.pk %}">Редактировать</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="th-sm">ФИО</th>
+            <th class="th-sm">Ученик</th>
+            <th class="th-sm">Последнее посещение</th>
+            <th class="th-sm">Текущие курсы</th>
+            <th class="th-sm">Редактировать</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="tab-pane fade" id="groups">Тут будет список групп</div>
+    <div class="tab-pane fade" id="courses">Тут будет список курсов...</div>
+  </div>
+</div>
+
+<script>
+  // Ссылки на вкладки
+  var hash = location.hash.replace(/^#/, '');
+  if (hash) {
+      $('.nav-tabs a[href="#' + hash + '"]').tab('show');
+  }
+  $('.nav-tabs a').on('shown.bs.tab', function (e) {
+      window.location.hash = e.target.hash;
+  })
+
+$(document).ready(function(){
+    $('#user-table').dataTable();
+});
+
+</script>
+{% endblock %}
+
