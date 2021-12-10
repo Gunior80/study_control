@@ -39,7 +39,11 @@
         {% for course in all_courses %}
         <div class="col-md-3 col-sm-6 col-12 col-xl-3" >
           <div class="card h-100">
-            <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+            {% if course.image %}
+              <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+            {% else %}
+              <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
+            {% endif %}
             <div class="card-body">
               <h5 class="card-title">{{ course.name }}</h5>
               <p class="card-text">{{ course.description|splitter }}</p>

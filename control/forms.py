@@ -55,6 +55,7 @@ class CourseForm(ModelForm):
     def save(self, commit=True):
         course = super().save(commit=False)
         course.slug = slugify(course.name)
+        #if course.image
         if commit:
             course.save()
         return course

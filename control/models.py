@@ -99,7 +99,7 @@ class Lesson(models.Model):
 
 class Group(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование группы", )
-    course = models.ForeignKey(Course, verbose_name="Курс", related_name='course', on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, verbose_name="Курс", related_name='group', on_delete=models.CASCADE)
     user = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='user')
     request = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request')
     study_start = models.DateField(verbose_name="Дата начала обучения")

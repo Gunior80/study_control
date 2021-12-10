@@ -23,7 +23,11 @@
   <div class="row">
     <div class="col col-lg-3">
       {% if course %}
-        <img src="{{ course.image.url}}" alt="connect" style="width:200px">
+        {% if course.image %}
+          <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+        {% else %}
+          <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
+        {% endif %}
       {% endif %}
       {{ form.image|as_crispy_field }}
     </div>
@@ -33,6 +37,7 @@
     </div>
   </div>
   <br/>
+  {% if course %}
   <div class="row">
     <div class="col col-lg-3 text-center">
       {% if course.groups.all|length > 0 %}
@@ -55,6 +60,7 @@
         </ul>
     </div>
   </div>
+  {% endif %}
   </form>
 </div>
 {% endblock %}

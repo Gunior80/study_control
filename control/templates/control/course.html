@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load static %}
 
 {% block head %} {% endblock %}
 
@@ -26,7 +26,11 @@
   <br/>
   <div class="row">
     <div class="col col-lg-3">
-        <img width="200px" src="{{ course.image.url }}" alt="Превью">
+        {% if course.image %}
+           <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+        {% else %}
+           <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
+        {% endif %}
     </div>
     <div class="col-6">
         <h4>Описание курса</h4>
