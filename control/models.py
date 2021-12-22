@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from pytils.translit import slugify
+from tinymce import models as tinymce_models
 
 # Create your models here.
 
@@ -16,7 +17,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     patronymic = models.CharField(max_length=150, blank=True, verbose_name="Отчество", )
     birth_date = models.DateField(null=True, blank=True)
-    about = models.TextField(blank=True, default='', verbose_name="О себе", )
+    about = tinymce_models.HTMLField(blank=True, default='', verbose_name="О себе", )
 
     class Meta:
         verbose_name = _("Пользователь")
@@ -41,8 +42,9 @@ def upload_course(instance, filename):
 class Course(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование курса", )
     image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course)
-    description = models.TextField(blank=True, default='', verbose_name="Описание курса", )
-    slug = models.SlugField(default='',)
+    description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание курса", )
+    slug = models.SlugField(default='', unique=True)
+    disciplines = models.BooleanField(default=True, verbose_name="Разделять предметы по дисциплинам")
     owner = models.ForeignKey(User, verbose_name="Заведующий курсом", null=True, default=None, related_name='owner', on_delete=models.SET_DEFAULT)
 
     class Meta:
@@ -61,7 +63,7 @@ class Course(models.Model):
             old_self = Course.objects.get(pk=self.pk)
             if old_self.image and self.image != old_self.image:
                 old_self.image.delete(False)
-        return super(Course, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 @receiver(pre_delete, sender=Course)
@@ -74,8 +76,8 @@ class Discipline(models.Model):
     name = models.CharField(verbose_name="Наименование дисциплины", max_length=256)
     description = models.TextField(blank=True, default='',
                                    verbose_name="Описание дисциплины", )
-    course = models.ForeignKey(Course, verbose_name="Курс", related_name='disciplines', on_delete=models.CASCADE)
-    teacher = models.ForeignKey(User, verbose_name="Преподаватель", related_name='teacher', null=True, default=None, on_delete=models.SET_DEFAULT)
+    course = models.ForeignKey(Course, verbose_name="Курс", related_name='discipline', on_delete=models.CASCADE)
+    teacher = models.ForeignKey(User, verbose_name="Преподаватель", related_name='discipline', null=True, default=None, on_delete=models.SET_DEFAULT)
 
     def __str__(self):
         return self.name
@@ -102,6 +104,7 @@ class Group(models.Model):
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='group', on_delete=models.CASCADE)
     user = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='user')
     request = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request')
+    max_users = models.PositiveIntegerField(default=30, verbose_name="Максимальное количество учащихся", )
     study_start = models.DateField(verbose_name="Дата начала обучения")
     study_end = models.DateField(verbose_name="Дата конца обучения")
 

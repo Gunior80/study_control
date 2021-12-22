@@ -5,7 +5,7 @@
 
 
 {% block body %}
-<div class="container">
+<div class="container-fluid " style="width: 80%;">
 <ul class="nav nav-tabs">
   <li class="nav-item">
     <a class="nav-link active" data-toggle="tab" href="#about">О курсе</a>
@@ -25,35 +25,32 @@
     <h3>{{ course.name }}</h3>
   <br/>
   <div class="row">
-    <div class="col col-lg-3">
+    <div class="col col-2">
         {% if course.image %}
            <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
         {% else %}
            <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
         {% endif %}
+        <div class="text-center">
+            {% if groups|length > 0 %}
+                <h5>Текущие наборы:</h5>
+                {% for group in group %}
+                    <div>Дата начала</div>
+                    <div>{{ group.study_start }}</div>
+                    <button type="submit" class="btn btn-primary">Подать заявку</button>
+                    <br/>
+                {% endfor %}
+            {% else %}
+                <div>В данный момент набор на курс не ведется.</div>
+            {% endif %}
+        </div>
     </div>
-    <div class="col-6">
+    <div class="col">
         <h4>Описание курса</h4>
-        {{ course.description }}
+        {{ course.description|safe }}
     </div>
-  </div>
-  <br/>
-  <div class="row">
-    <div class="col col-lg-3 text-center">
-      {% if groups|length > 0 %}
-        <h5>Текущие наборы:</h5>
-        {% for group in group %}
-          <div>Дата начала</div>
-          <div>{{ group.study_start }}</div>
-          <button type="submit" class="btn btn-primary">Подать заявку</button>
-          <br/>
-        {% endfor %}
-      {% else %}
-        <div>В данный момент набор на курс не ведется.</div>
-      {% endif %}
-    </div>
-    <div class="col-6">
-        <h4>Дисциплины курса:</h4>
+    <div class="col">
+        <h4>Содержание курса:</h4>
         <ul>
         {% for discipline in course.disciplines.all %}
             <li>{{ discipline.name }}</li>

@@ -13,24 +13,23 @@
 
 {% block body %}
 <div class="container">
-  <h3>Настройки площадки</h3>
+  <h3>Настройки пользователей</h3>
   <ul class="nav nav-tabs">
     <li class="nav-item">
-    <a class="nav-link active" data-toggle="tab" href="#dashboard">Статистика системы</a>
+    <a class="nav-link" href="{% url 'settings_dashboard' %}">Статистика системы</a>
+    </li>
+    <li class="nav-item active">
+      <a class="nav-link" href="{% url 'settings_users' %}">Пользователи</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" data-toggle="tab" href="#users">Пользователи</a>
+      <a class="nav-link" href="{% url 'settings_groups' %}">Группы</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" data-toggle="tab" href="#groups">Группы</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" data-toggle="tab" href="#courses">Курсы</a>
+      <a class="nav-link" href="{% url 'settings_courses' %}">Курсы</a>
     </li>
   </ul>
   <div class="tab-content">
-    <div class="tab-pane fade show active" id="dashboard">Статистика системы</div>
-    <div class="tab-pane fade" id="users">
+    <div class="tab-pane fade show active" id="users">
       <br/>
       <div class="text-right"><td><a href="{% url 'user_add' %}" class="btn btn-primary">Создать</a></td></div>
       <br/>
@@ -41,7 +40,8 @@
             <th class="th-sm">Ученик</th>
             <th class="th-sm">Последнее посещение</th>
             <th class="th-sm">Текущие курсы</th>
-            <th class="th-sm">Редактировать</th>
+            <th class="th-sm">Редактировать профиль пользователя</th>
+            <th class="th-sm">Удалить пользователя</th>
           </tr>
         </thead>
         <tbody>
@@ -52,6 +52,12 @@
             <td>{{ user.last_login }}</td>
             <td>{% for group in user.group.all %}{{ group.course }} {% endfor %}</td>
             <td><a href="{% url 'user_edit' pk=user.pk %}">Редактировать</a></td>
+            <td>
+              <form action="{% url 'user_del' pk=user.pk %}" method="post">
+                  {% csrf_token %}
+                  <button type="submit" href="">Удалить </button>
+              </form>
+            </td>
           </tr>
         {% endfor %}
         </tbody>
@@ -66,25 +72,7 @@
         </tfoot>
       </table>
     </div>
-    <div class="tab-pane fade" id="groups">Тут будет список групп</div>
-    <div class="tab-pane fade" id="courses">Тут будет список курсов...</div>
   </div>
 </div>
-
-<script>
-  // Ссылки на вкладки
-  var hash = location.hash.replace(/^#/, '');
-  if (hash) {
-      $('.nav-tabs a[href="#' + hash + '"]').tab('show');
-  }
-  $('.nav-tabs a').on('shown.bs.tab', function (e) {
-      window.location.hash = e.target.hash;
-  })
-
-$(document).ready(function(){
-    $('#user-table').dataTable();
-});
-
-</script>
 {% endblock %}
 

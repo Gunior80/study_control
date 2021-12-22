@@ -3,25 +3,27 @@
 {% load poll_extras %}
 {% load crispy_forms_tags %}
 
-{% block head %} {% endblock %}
+{% block head %}
+{{ form.media }}
+{% endblock %}
 
 
 {% block body %}
-<div class="container">
+<div class="container-fluid " style="width: 80%;">
   <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
     {{ form.slug.as_hidden }}
     <div class="row">
+      <div class="col col-lg-3"><td><a href="javascript:history.go(-1)" class="btn btn-primary">Назад</a></td></div>
       {% if course %}
-      <div class="col col-lg-3"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
+      <div class="col col-lg-6 text-right"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
       {% else %}
-      <div class="col col-lg-3"><button type="submit" class="btn btn-primary">Сохранить</button></div>
+      <div class="col col-lg-6 text-right"><button type="submit" class="btn btn-primary">Сохранить</button></div>
       {% endif %}
-      <div class="col-6 text-right"><h3>{{ form.name|as_crispy_field }}</h3></div>
     </div>
   <br/>
   <div class="row">
-    <div class="col col-lg-3">
+    <div class="col col-2">
       {% if course %}
         {% if course.image %}
           <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
@@ -30,37 +32,40 @@
         {% endif %}
       {% endif %}
       {{ form.image|as_crispy_field }}
-    </div>
-    <div class="col-6">
-        <h4>Описание курса</h4>
-        {{ form.description|as_crispy_field }}
-    </div>
-  </div>
-  <br/>
-  {% if course %}
-  <div class="row">
-    <div class="col col-lg-3 text-center">
-      {% if course.groups.all|length > 0 %}
-        <h5>Текущие наборы:</h5>
-        {% for group in course.groups.all %}
-          <div>Группы курса</div>
-          <div>{{ group.name }}</div>
-          <br/>
-        {% endfor %}
-      {% else %}
-        <div>В данный момент набор на курс не ведется.</div>
+
+      {% if course %}
+        <div class="text-center">
+
+        {% if course.groups.all|length > 0 %}
+          <h5>Текущие наборы:</h5>
+          {% for group in course.groups.all %}
+            <div>Группы курса</div>
+            <div>{{ group.name }}</div>
+            <br/>
+          {% endfor %}
+        {% else %}
+          <div>В данный момент набор на курс не ведется.</div>
+        {% endif %}
+        </div>
       {% endif %}
     </div>
     <div class="col-6">
-        <h4>Дисциплины курса:</h4>
-        <ul>
-        {% for discipline in course.disciplines.all %}
-            <li>{{ discipline.name }}</li>
-        {% endfor %}
-        </ul>
+        <h4>{{ form.name|as_crispy_field }}</h4>
+        <h4>Описание курса</h4>
+        {{ form.description }}
     </div>
+      <div class="col">
+        {{ form.disciplines|as_crispy_field }}
+        {% if course %}
+          <h4>Дисциплины курса:</h4>
+          <ul>
+          {% for discipline in course.disciplines.all %}
+              <li>{{ discipline.name }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
   </div>
-  {% endif %}
   </form>
 </div>
 {% endblock %}

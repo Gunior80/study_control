@@ -15,23 +15,32 @@ Including another URLconf
 """
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path
-from control.views import Index, Registration, Login, CourseDetail, CourseAdd, CourseEdit, Settings, UserAdd, UserEdit
+from django.contrib.auth.decorators import login_required
+from django.urls import path, include
+from control.views import Index, Registration, Login, CourseDetail, CourseAdd, CourseEdit, UserEdit, UserAdd, \
+    DashboardAdmin, UserAdmin, CourseAdmin, GroupAdmin, UserDel
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
     path('', Index.as_view(), name='index'),
+
     path('login/', Login.as_view(), name="login"),
     path('registration', Registration.as_view(), name='registration'),
-
     path("logout/", LogoutView.as_view(), {'next_page': '/'}, name="logout"),
+
     path('course/add', CourseAdd.as_view(), name='course_add'),
     path('course/<slug:slug>', CourseDetail.as_view(), name='course'),
     path('course/<slug:slug>/edit', CourseEdit.as_view(), name='course_edit'),
-    path('settings', Settings.as_view(), name='settings'),
+
+    path('settings/dashboard', login_required(DashboardAdmin.as_view()), name='settings_dashboard'),
+    path('settings/users', login_required(UserAdmin.as_view()), name='settings_users'),
+    path('settings/groups', login_required(GroupAdmin.as_view()), name='settings_groups'),
+    path('settings/courses', login_required(CourseAdmin.as_view()), name='settings_courses'),
+
     path('user/add', UserAdd.as_view(), name='user_add'),
     #path('user/<int:pk>', UserDetail.as_view(), name='user'),
-    path('user/<int:pk>/edit', UserEdit.as_view(), name='user_edit'),
+    path('user/<int:pk>/edit', login_required(UserEdit.as_view()), name='user_edit'),
+    path('user/<int:pk>/del', login_required(UserDel.as_view()), name='user_del'),
 ]
 
 if settings.DEBUG:

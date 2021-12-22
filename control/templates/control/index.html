@@ -46,7 +46,7 @@
             {% endif %}
             <div class="card-body">
               <h5 class="card-title">{{ course.name }}</h5>
-              <p class="card-text">{{ course.description|splitter }}</p>
+              <p class="card-text">{{ course.description|striptags|truncatechars:50|safe }}</p>
               <a href="{{ course.get_absolute_url }}" class="btn btn-primary">Больше о курсе</a>
             </div>
           </div>

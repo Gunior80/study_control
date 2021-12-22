@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+
+{% block head %} {% endblock %}
+
+
+{% block body %}
+<div class="container">
+  <div class="row">
+    <div class="col">
+    </div>
+    <div class="col-6">
+      <div class="col col-lg-3"><td><a href="" class="btn btn-primary">Назад</a></td></div>
+      <div class="col text-center">
+      <form method="post">
+        {% csrf_token %}
+        {{ user_form|crispy }}
+        {{ profile_form|crispy }}
+        <button type="submit">Save changes</button>
+       </form>
+
+    </div>
+    </div>
+    <div class="col">
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -8,10 +8,11 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 
 # Create your views here.
+from django.urls import reverse
 from django.views import View
 from django.views.generic import TemplateView, DetailView, UpdateView, ListView
 
-from control.forms import RegistrationForm, CourseForm
+from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupForm
 from control.models import Course, Discipline, Group
 
 
@@ -80,40 +81,100 @@ class Login(View):
         })
 
 
+class UserAdmin(TemplateView):
+    template_name = 'control/settings/users.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['users'] = User.objects.all()
+        return context
+
+
 class UserAdd(View):
 
     def post(self, request):
         reg_form = RegistrationForm(request.POST)
         if reg_form.is_valid():
             reg_form.save()
-            return redirect('settings')
+            messages.error(request, "Пользователь успешно добавлен.")
+            return redirect('settings_users')
         else:
-            return render(request, 'control/user_edit.html', {
+            return render(request, 'control/registration.html', {
                 'reg_form': reg_form,
             })
 
     def get(self, request):
         reg_form = RegistrationForm()
-        return render(request, 'control/user_edit.html', {
+        return render(request, 'control/registration.html', {
             'reg_form': reg_form,
         })
 
 
-class UserEdit(UpdateView):
-    model = User
-    template_name = 'control/user_edit.html'
-    form_class = RegistrationForm
-    success_url = '/'
+class UserEdit(View):
+
+    def get(self, request, *args, **kwargs):
+        print(kwargs)
+        if request.user.is_staff:
+            user = User.objects.get(pk=kwargs['pk'])
+            user_form = EditUser(instance=user)
+            profile_form = ProfileForm(instance=user.profile)
+        else:
+            user_form = EditUser(instance=request.user)
+            profile_form = ProfileForm(instance=request.user.profile)
+        return render(request, 'control/profile_edit.html', {
+                      'user_form': user_form,
+                      'profile_form': profile_form
+    })
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            user = User.objects.get(pk=kwargs['pk'])
+            user_form = EditUser(request.POST, instance=user)
+            profile_form = ProfileForm(request.POST, instance=user.profile)
+        else:
+            user_form = EditUser(request.POST, instance=request.user)
+            profile_form = ProfileForm(request.POST, instance=request.user.profile)
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Профиль успешно обновлен')
+            if request.user.is_staff:
+                return redirect('settings_users')
+        else:
+            messages.error(request, 'Ошибка обновления профиля')
+        return render(request, 'control/profile_edit.html', {
+            'user_form': user_form,
+            'profile_form': profile_form
+        })
 
 
+class UserDel(View):
 
-class Settings(TemplateView):
-    template_name = 'control/settings.html'
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            user = User.objects.get(pk=kwargs['pk'])
+        else:
+            user = request.user
+        user.delete()
+        return redirect('settings_users')
+
+
+class DashboardAdmin(TemplateView):
+    template_name = 'control/settings/dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['users'] = User.objects.all()
-        print(context)
+        return context
+
+
+class CourseAdmin(TemplateView):
+    template_name = 'control/settings/courses.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['courses'] = Course.objects.all()
         return context
 
 
@@ -138,7 +199,7 @@ class CourseAdd(View):
         if form.is_valid():
             f = form.save()
             messages.error(request, "Курс создан.")
-            return redirect('course_edit', slug=f.slug)
+            return redirect('settings_courses')
         else:
             messages.error(request, "Проверьте поля формы.")
         return render(request, 'control/course_edit.html', {'form': form,})
@@ -148,5 +209,33 @@ class CourseEdit(UpdateView):
     model = Course
     template_name = 'control/course_edit.html'
     form_class = CourseForm
-    success_url = 'edit'
 
+    def get_success_url(self):
+        return reverse('settings_courses', args=None)
+
+
+
+class GroupAdmin(TemplateView):
+    template_name = 'control/settings/groups.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['users'] = User.objects.all()
+        return context
+
+
+class GroupAdd(View):
+
+    def get(self, request, *args, **kwargs):
+        form = GroupForm(request.POST)
+        return render(request, 'control/group_edit.html', {'form': form,})
+
+    def post(self, request, *args, **kwargs):
+        form = GroupForm(request.POST)
+        if form.is_valid():
+            f = form.save()
+            messages.error(request, "Группа создана.")
+            return redirect('settings_groups')
+        else:
+            messages.error(request, "Проверьте поля формы.")
+        return render(request, 'control/group_edit.html', {'form': form,})

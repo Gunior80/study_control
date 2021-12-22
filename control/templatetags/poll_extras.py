@@ -12,6 +12,7 @@ def shuffle(arg):
 
 @register.filter(name='splitter')
 def splitter(text):
+    print(text)
     if len(text) > 50:
         return text[0:49]+'...'
     else:
