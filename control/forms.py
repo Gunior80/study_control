@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.utils.safestring import mark_safe
 from pytils.translit import slugify
 from tinymce.widgets import TinyMCE
-from control.models import Course, Profile
+from control.models import Course, Profile, Group
 
 
 class RegistrationForm(UserCreationForm):
@@ -84,29 +84,16 @@ class CourseForm(forms.ModelForm):
             ]
 
 
-class GroupForm(forms.ModelForm):
-    name = forms.CharField(max_length=50, required=True,
-                           label='Наименование курса')
-    image = forms.ImageField(required=False, help_text='Превью курса',
-                             label='Изображение', widget=forms.FileInput)
-    description = forms.CharField(widget=TinyMCE())
-    disciplines = forms.BooleanField(label='Дисциплины курса')
-    slug = forms.CharField(empty_value="course")
+class DateInput(forms.DateInput):
+    input_type = 'date'
 
-    def save(self, commit=True):
-        course = super().save(commit=False)
-        course.slug = slugify(course.name)
-        #if course.image
-        if commit:
-            course.save()
-        return course
+
+class GroupAddForm(forms.ModelForm):
 
     class Meta:
-        model = Course
-        fields = [
-            'name',
-            'image',
-            'description',
-            'disciplines',
-            'slug'
-            ]
+        model = Group
+        fields = '__all__'
+        widgets = {
+            'study_start': DateInput(),
+            'study_end': DateInput(),
+        }

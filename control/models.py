@@ -41,7 +41,7 @@ def upload_course(instance, filename):
 
 class Course(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование курса", )
-    image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course)
+    image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course, blank=True)
     description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание курса", )
     slug = models.SlugField(default='', unique=True)
     disciplines = models.BooleanField(default=True, verbose_name="Разделять предметы по дисциплинам")
@@ -89,10 +89,12 @@ class Discipline(models.Model):
 
 class Lesson(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование занятия",)
-    description = models.TextField(blank=True, default='',
-                                   verbose_name="Описание занятия", )
-    discipline = models.ForeignKey(Discipline, verbose_name="Дисциплина", related_name='lessons',
+    description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание занятия", )
+    discipline = models.ForeignKey(Discipline, verbose_name="Дисциплина", related_name='lesson',
                                    on_delete=models.CASCADE)
+
+    def get_absolute_url(self):
+        return reverse('дуыыщт', kwargs={'pk': self.pk})
 
     class Meta:
         verbose_name = _("Занятие")
@@ -102,8 +104,8 @@ class Lesson(models.Model):
 class Group(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование группы", )
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='group', on_delete=models.CASCADE)
-    user = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='user')
-    request = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request')
+    user = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='user', blank=True)
+    request = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request', blank=True)
     max_users = models.PositiveIntegerField(default=30, verbose_name="Максимальное количество учащихся", )
     study_start = models.DateField(verbose_name="Дата начала обучения")
     study_end = models.DateField(verbose_name="Дата конца обучения")

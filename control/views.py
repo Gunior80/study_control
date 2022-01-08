@@ -12,8 +12,8 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import TemplateView, DetailView, UpdateView, ListView
 
-from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupForm
-from control.models import Course, Discipline, Group
+from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm
+from control.models import Course, Discipline, Group, Lesson
 
 
 class Index(TemplateView):
@@ -227,15 +227,24 @@ class GroupAdmin(TemplateView):
 class GroupAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = GroupForm(request.POST)
-        return render(request, 'control/group_edit.html', {'form': form,})
+        form = GroupAddForm(request.POST)
+        return render(request, 'control/settings/group_edit.html', {'form': form,})
 
     def post(self, request, *args, **kwargs):
-        form = GroupForm(request.POST)
+        form = GroupAddForm(request.POST)
         if form.is_valid():
             f = form.save()
             messages.error(request, "Группа создана.")
             return redirect('settings_groups')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/group_edit.html', {'form': form,})
+        return render(request, 'control/settings/group_edit.html', {'form': form,})
+
+
+class LessonDetail(DetailView):
+    template_name = 'control/lesson.html'
+    model = Lesson
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context

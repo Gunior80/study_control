@@ -51,11 +51,14 @@
     </div>
     <div class="col">
         <h4>Содержание курса:</h4>
-        <ul>
-        {% for discipline in course.disciplines.all %}
-            <li>{{ discipline.name }}</li>
+        {% for discipline in course.discipline.all %}
+        <dl>
+            <dt>{{ discipline.name }}</dt>
+            {% for lesson in discipline.lesson.all %}
+            <dd><a class="nav-link" href="{% url 'lesson' slug=course.slug id=lesson.id %}">Редактировать</a></dd>
+            {% endfor %}
+        </dl>
         {% endfor %}
-        </ul>
     </div>
   </div>
   </div>
