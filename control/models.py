@@ -94,7 +94,7 @@ class Lesson(models.Model):
                                    on_delete=models.CASCADE)
 
     def get_absolute_url(self):
-        return reverse('дуыыщт', kwargs={'pk': self.pk})
+        return reverse('lesson', kwargs={'slug': self.discipline.course.slug, 'pk': self.pk})
 
     class Meta:
         verbose_name = _("Занятие")

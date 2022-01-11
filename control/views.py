@@ -26,7 +26,6 @@ class Index(TemplateView):
         if a_groups:
             a_groups = a_groups[0].values()
         context['avaible_courses'] = context['all_courses'].filter(id__in=a_groups)
-        print(context['avaible_courses'])
         return context
 
 
@@ -113,7 +112,6 @@ class UserAdd(View):
 class UserEdit(View):
 
     def get(self, request, *args, **kwargs):
-        print(kwargs)
         if request.user.is_staff:
             user = User.objects.get(pk=kwargs['pk'])
             user_form = EditUser(instance=user)

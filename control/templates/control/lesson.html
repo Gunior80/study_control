@@ -8,32 +8,26 @@
 <div class="container-fluid " style="width: 80%;">
 <ul class="nav nav-tabs">
   <li class="nav-item">
-    <a class="nav-link active" data-toggle="tab" href="#about">О курсе</a>
+    <a class="nav-link" href="{% url 'course' slug=lesson.discipline.course.slug %}">К курсу</a>
   </li>
   <li class="nav-item">
-    <a class="nav-link" data-toggle="tab" href="#groups">Группы</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" data-toggle="tab" href="#statistic">Статистика курса</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'course_edit' slug=course.slug %}">Редактировать</a>
+    <a class="nav-link active" data-toggle="tab" href="#lesson">Занятие</a>
   </li>
 </ul>
 <div class="tab-content">
-  <div class="tab-pane fade show active" id="about">
-    <h3>{{ lesson.discipline.course.name }} - {{ lesson.name }}</h3>
+  <div class="tab-pane fade show active" id="lesson">
+    <h3>{{ lesson.name }}</h3>
   <br/>
   <div class="row">
     <div class="col col-2">
 
     </div>
     <div class="col">
-        <h4>{{ Описание занятия }}</h4>
+        <h4>Описание занятия</h4>
         {{ lesson.description|safe }}
     </div>
     <div class="col">
-        <h4>{{ Описание занятия }}</h4>
+        <h4>Задания</h4>
 
     </div>
   </div>
