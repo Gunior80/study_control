@@ -1,7 +1,6 @@
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth.models import User
-from django.utils.safestring import mark_safe
 from pytils.translit import slugify
 from tinymce.widgets import TinyMCE
 from control.models import Course, Profile, Group
@@ -48,9 +47,11 @@ class EditUser(forms.ModelForm):
 
 
 class ProfileForm(forms.ModelForm):
-    patronymic = forms.CharField(max_length=30, required=False, help_text='Обязательно для заполнения', label='Отчество')
+    patronymic = forms.CharField(max_length=30, required=False,
+                                 help_text='Обязательно для заполнения', label='Отчество')
     birth_date = forms.DateTimeField(required=False, label='День рождения')
     about = forms.CharField(widget=TinyMCE(), required=False, label='О себе')
+
     class Meta:
         model = Profile
         fields = ['patronymic', 'about', 'birth_date']
@@ -68,7 +69,6 @@ class CourseForm(forms.ModelForm):
     def save(self, commit=True):
         course = super().save(commit=False)
         course.slug = slugify(course.name)
-        #if course.image
         if commit:
             course.save()
         return course
