@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 
 from django.db import models
 from django.urls import reverse
@@ -42,10 +42,12 @@ def upload_course(instance, filename):
 class Course(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование курса", )
     image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course, blank=True)
-    description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание курса", )
+    description = tinymce_models.HTMLField(blank=True, default='',
+                                           verbose_name="Описание курса", )
     slug = models.SlugField(default='', unique=True)
-    disciplines = models.BooleanField(default=True, verbose_name="Разделять предметы по дисциплинам")
-    owner = models.ForeignKey(User, verbose_name="Заведующий курсом", null=True, default=None, related_name='owner', on_delete=models.SET_DEFAULT)
+    owner = models.ForeignKey(User, verbose_name="Заведующий курсом", null=True, default=None,
+                              related_name='owner', on_delete=models.SET_NULL,
+                              limit_choices_to={'is_staff': True})
 
     class Meta:
         verbose_name = _("Курс")
@@ -74,10 +76,12 @@ def image_delete(sender, instance, **kwargs):
 
 class Discipline(models.Model):
     name = models.CharField(verbose_name="Наименование дисциплины", max_length=256)
-    description = models.TextField(blank=True, default='',
-                                   verbose_name="Описание дисциплины", )
+    description = tinymce_models.HTMLField(blank=True, default='',
+                                           verbose_name="Описание дисциплины", )
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='discipline', on_delete=models.CASCADE)
-    teacher = models.ForeignKey(User, verbose_name="Преподаватель", related_name='discipline', null=True, default=None, on_delete=models.SET_DEFAULT)
+    teacher = models.ForeignKey(User, verbose_name="Преподаватель", related_name='discipline',
+                                null=True, default=None, on_delete=models.SET_DEFAULT,
+                                limit_choices_to={'is_staff': True})
 
     def __str__(self):
         return self.name
@@ -104,11 +108,26 @@ class Lesson(models.Model):
 class Group(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование группы", )
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='group', on_delete=models.CASCADE)
-    user = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='user', blank=True)
-    request = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request', blank=True)
+    students = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='stud_user', blank=True)
+    requests = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request_user', blank=True)
     max_users = models.PositiveIntegerField(default=30, verbose_name="Максимальное количество учащихся", )
     study_start = models.DateField(verbose_name="Дата начала обучения")
     study_end = models.DateField(verbose_name="Дата конца обучения")
+
+    def get_status(self):
+        now = datetime.date.today()
+        if self.study_start < now and now < self.study_end:
+            return "Ведется обучение"
+        elif now < self.study_start:
+            return "Ведется набор"
+        elif self.study_end < now:
+            return "Обучение завершено"
+
+    def add_students(self, querydict):
+        for key, value in querydict.items():
+            if int(value) == True:
+                self.students.add(User.objects.get(pk=int(key)))
+            self.requests.remove(User.objects.get(pk=int(key)))
 
     class Meta:
         verbose_name = _("Группа")

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load poll_extras %}
+{% load crispy_forms_tags %}
+
+{% block head %}
+{{ form.media }}
+{% endblock %}
+
+
+{% block body %}
+<div class="container-fluid " style="width: 80%;">
+  <form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+    <div class="row">
+      <div class="col col-lg-3"><a href="{% url 'settings_disciplines' %}" class="btn btn-primary">Назад</a></div>
+      {% if discipline %}
+      <div class="col col-lg-6 text-right"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
+      {% else %}
+      <div class="col col-lg-6 text-right"><button type="submit" class="btn btn-primary">Сохранить</button></div>
+      {% endif %}
+    </div>
+  <br/>
+  <div class="row">
+    <div class="col-2">
+      <h4>{{ form.course|as_crispy_field }}</h4>
+    </div>
+    <div class="col-6">
+        <h4>{{ form.name|as_crispy_field }}</h4>
+        <h4>Описание дисциплины</h4>
+        {{ form.description }}
+    </div>
+      <div class="col-2">
+        {{ form.teacher|as_crispy_field }}
+        {% if discipline %}
+          <h4>Дисциплины курса:</h4>
+          <ul>
+          {% for lesson in disciplines.lesson.all %}
+              <li>{{ lesson.name }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+  </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-
 {% load crispy_forms_tags %}
+
 
 {% block head %} {% endblock %}
 
@@ -11,51 +11,44 @@
     <div class="col">
     </div>
     <div class="col-6">
+      <div class="col col-lg-3"><td><a href="javascript:history.go(-1)" class="btn btn-primary">Назад</a></td></div>
       <div class="col text-center">
       <form method="post">
         {% csrf_token %}
         <div class="form-row">
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.first_name|as_crispy_field }}
+            {{ user_form.first_name|as_crispy_field }}
           </div>
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.last_name|as_crispy_field }}
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group col-md-6 mb-0">
-            {{ reg_form.username|as_crispy_field }}
-          </div>
-          <div class="form-group col-md-6 mb-0">
-            {{ reg_form.email|as_crispy_field }}
+            {{ user_form.last_name|as_crispy_field }}
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.password1|as_crispy_field }}
+            {{ profile_form.patronymic|as_crispy_field }}
           </div>
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.password2|as_crispy_field }}
+            {{ profile_form.birth_date|as_crispy_field }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-12 mb-0">
+            {{ profile_form.about|as_crispy_field }}
           </div>
         </div>
         {% if request.user.is_staff %}
         <div class="form-row">
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.is_staff|as_crispy_field }}
+            {{ user_form.is_staff|as_crispy_field }}
           </div>
           <div class="form-group col-md-6 mb-0">
-            {{ reg_form.is_superuser|as_crispy_field }}
+            {{ user_form.is_superuser|as_crispy_field }}
           </div>
         </div>
         {% endif %}
-        <div class="col text-right">
-          {% if request.user.is_staff %}
-            <button type="submit" class="btn btn-primary">Создать пользователя</button>
-          {% else %}
-            <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
-          {% endif %}
-        </div>
-      </form>
+        <button type="submit">Save changes</button>
+       </form>
+
     </div>
     </div>
     <div class="col">

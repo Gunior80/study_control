@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+
+{% block head %} {% endblock %}
+
+
+{% block body %}
+<div class="container">
+  <h3>Обучающиеся в группе</h3>
+  <br/>
+    <div class="text-right"><td><a href="{% url 'settings_groups' %}" class="btn btn-primary">Назад</a></td></div>
+    <br/>
+    <table id="user-table" class="table table-striped table-bordered sortable">
+      <thead>
+        <tr>
+          <th class="th-sm">ФИО</th>
+          <th class="th-sm">Успеваемость по курсу "{{ group.course.name }}"</th>
+          <th class="th-sm">Исключить из группы</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in group.students.all %}
+          <tr>
+            <td>{{ student.last_name }} {{ student.first_name }} {{ student.profile.patronymic }}</td>
+            <td></td>
+            <td>
+              <form  action="{% url 'students_group' pk=group.pk %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ student.id }}">
+                <button class="btn btn-danger" type="submit" href="">Исключить</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th class="th-sm">ФИО</th>
+          <th class="th-sm">Успеваемость по курсу {{ group.course.name }}</th>
+          <th class="th-sm">Исключить из группы</th>
+        </tr>
+      </tfoot>
+    </table>
+</div>
+{% endblock %}

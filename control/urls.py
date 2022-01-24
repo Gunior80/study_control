@@ -18,7 +18,8 @@ from django.conf.urls.static import static
 from django.contrib.auth.decorators import login_required
 from django.urls import path, include
 from control.views import Index, Registration, Login, CourseDetail, CourseAdd, CourseEdit, UserEdit, UserAdd, \
-    DashboardAdmin, UserAdmin, CourseAdmin, GroupAdmin, UserDel, GroupAdd, LessonDetail
+    DashboardAdmin, UserAdmin, CourseAdmin, GroupAdmin, UserDel, GroupAdd, LessonDetail, GroupDel, GroupEdit, Request, \
+    Unrequest, GroupRequests, GroupStudents, DisciplineAdmin, DisciplineAdd, DisciplineEdit
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
@@ -28,23 +29,33 @@ urlpatterns = [
     path('registration', Registration.as_view(), name='registration'),
     path("logout/", LogoutView.as_view(), {'next_page': '/'}, name="logout"),
 
-    path('course/add', CourseAdd.as_view(), name='course_add'),
     path('course/<slug:slug>', CourseDetail.as_view(), name='course'),
-    path('course/<slug:slug>/edit', CourseEdit.as_view(), name='course_edit'),
-
+    path('course/<slug:slug>/request', Request.as_view(), name="request"),
+    path('course/<slug:slug>/unrequest', Unrequest.as_view(), name="unrequest"),
     path('course/<slug:slug>/lesson/<int:pk>', login_required(LessonDetail.as_view()), name='lesson'),
 
     path('settings/dashboard', login_required(DashboardAdmin.as_view()), name='settings_dashboard'),
-    path('settings/users', login_required(UserAdmin.as_view()), name='settings_users'),
-    path('settings/groups', login_required(GroupAdmin.as_view()), name='settings_groups'),
+
     path('settings/courses', login_required(CourseAdmin.as_view()), name='settings_courses'),
+    path('settings/course/add', login_required(CourseAdd.as_view()), name='course_add'),
+    path('settings/course/<slug:slug>/edit', login_required(CourseEdit.as_view()), name='course_edit'),
 
-    path('settings/groups/add', GroupAdd.as_view(), name='group_add'),
+    path('settings/disciplines', login_required(DisciplineAdmin.as_view()), name='settings_disciplines'),
+    path('settings/discipline/add', login_required(DisciplineAdd.as_view()), name='discipline_add'),
+    path('settings/discipline/<int:pk>/edit', login_required(DisciplineEdit.as_view()), name='discipline_edit'),
 
-    path('user/add', UserAdd.as_view(), name='user_add'),
-    #path('user/<int:pk>', UserDetail.as_view(), name='user'),
-    path('user/<int:pk>/edit', login_required(UserEdit.as_view()), name='user_edit'),
-    path('user/<int:pk>/del', login_required(UserDel.as_view()), name='user_del'),
+    path('settings/groups', login_required(GroupAdmin.as_view()), name='settings_groups'),
+    path('settings/groups/add', login_required(GroupAdd.as_view()), name='group_add'),
+    path('settings/groups/<int:pk>/edit', login_required(GroupEdit.as_view()), name='group_edit'),
+    path('settings/groups/<int:pk>/del', login_required(GroupDel.as_view()), name='group_del'),
+    path('settings/groups/<int:pk>/requests', login_required(GroupRequests.as_view()), name='requests_group'),
+    path('settings/groups/<int:pk>/students', login_required(GroupStudents.as_view()), name='students_group'),
+
+    path('settings/users', login_required(UserAdmin.as_view()), name='settings_users'),
+    path('settings/users/add', login_required(UserAdd.as_view()), name='user_add'),
+    #path('settings/users/<int:pk>', UserDetail.as_view(), name='user'),
+    path('settings/users/<int:pk>/edit', login_required(UserEdit.as_view()), name='user_edit'),
+    path('settings/users/<int:pk>/del', login_required(UserDel.as_view()), name='user_del'),
 
 ]
 

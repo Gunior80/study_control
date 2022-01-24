@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import TemplateView, DetailView, UpdateView, ListView
 
-from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm
+from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm, DisciplineAddForm
 from control.models import Course, Discipline, Group, Lesson
 
 
@@ -23,8 +23,6 @@ class Index(TemplateView):
         context = super().get_context_data(**kwargs)
         context['all_courses'] = Course.objects.all()
         a_groups = Group.objects.all().filter(study_start__gt=datetime.now()).values('course').distinct()
-        if a_groups:
-            a_groups = a_groups[0].values()
         context['avaible_courses'] = context['all_courses'].filter(id__in=a_groups)
         return context
 
@@ -80,6 +78,23 @@ class Login(View):
         })
 
 
+class Request(View):
+    # Запрос на включение в список группы
+    def post(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=request.POST.get('group_id'))
+        user = request.user
+        group.requests.add(user)
+        return redirect('course', slug=kwargs['slug'])
+
+class Unrequest(View):
+    # Запрос на удаление заявки в список группы
+    def post(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=request.POST.get('group_id'))
+        user = request.user
+        group.requests.remove(user)
+        return redirect('course', slug=kwargs['slug'])
+
+
 class UserAdmin(TemplateView):
     template_name = 'control/settings/users.html'
 
@@ -119,7 +134,7 @@ class UserEdit(View):
         else:
             user_form = EditUser(instance=request.user)
             profile_form = ProfileForm(instance=request.user.profile)
-        return render(request, 'control/profile_edit.html', {
+        return render(request, 'control/settings/edit/profile_edit.html', {
                       'user_form': user_form,
                       'profile_form': profile_form
     })
@@ -141,7 +156,7 @@ class UserEdit(View):
                 return redirect('settings_users')
         else:
             messages.error(request, 'Ошибка обновления профиля')
-        return render(request, 'control/profile_edit.html', {
+        return render(request, 'control/settings/edit/profile_edit.html', {
             'user_form': user_form,
             'profile_form': profile_form
         })
@@ -190,7 +205,7 @@ class CourseAdd(View):
 
     def get(self, request, *args, **kwargs):
         form = CourseForm(request.POST)
-        return render(request, 'control/course_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/course_edit.html', {'form': form,})
 
     def post(self, request, *args, **kwargs):
         form = CourseForm(request.POST, request.FILES)
@@ -200,12 +215,12 @@ class CourseAdd(View):
             return redirect('settings_courses')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/course_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/course_edit.html', {'form': form,})
 
 
 class CourseEdit(UpdateView):
     model = Course
-    template_name = 'control/course_edit.html'
+    template_name = 'control/settings/edit/course_edit.html'
     form_class = CourseForm
 
     def get_success_url(self):
@@ -218,7 +233,7 @@ class GroupAdmin(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['users'] = User.objects.all()
+        context['groups'] = Group.objects.all()
         return context
 
 
@@ -226,7 +241,7 @@ class GroupAdd(View):
 
     def get(self, request, *args, **kwargs):
         form = GroupAddForm(request.POST)
-        return render(request, 'control/settings/group_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/group_edit.html', {'form': form,})
 
     def post(self, request, *args, **kwargs):
         form = GroupAddForm(request.POST)
@@ -236,7 +251,88 @@ class GroupAdd(View):
             return redirect('settings_groups')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/group_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/group_edit.html', {'form': form,})
+
+
+class GroupEdit(UpdateView):
+    model = Group
+    template_name = 'control/settings/edit/group_edit.html'
+    form_class = GroupAddForm
+
+    def get_success_url(self):
+        return reverse('settings_groups', args=None)
+
+
+class GroupRequests(View):
+
+    def get(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=kwargs['pk'])
+        return render(request, 'control/settings/edit/group_requests.html', {'group': group, })
+
+    def post(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=kwargs['pk'])
+        data = request.POST.copy()
+        data.pop('csrfmiddlewaretoken')
+        group.add_students(data.dict())
+        return redirect('settings_groups')
+
+
+class GroupStudents(View):
+    # Результаты обучения и меры
+    def get(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=kwargs['pk'])
+        i = User.objects.get(pk=1)
+        return render(request, 'control/settings/edit/group_students.html', {'group': group, })
+
+    def post(self, request, *args, **kwargs):
+        group = Group.objects.get(pk=kwargs['pk'])
+        user = User.objects.get(pk=request.POST.get("user_id"))
+        group.students.remove(user)
+        return redirect('students_group', pk=kwargs['pk'])
+
+
+class GroupDel(View):
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            group = Group.objects.get(pk=kwargs['pk'])
+            group.delete()
+        return redirect('settings_groups')
+
+
+class DisciplineAdmin(TemplateView):
+    template_name = 'control/settings/disciplines.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['disciplines'] = Discipline.objects.all()
+        return context
+
+
+class DisciplineAdd(View):
+
+    def get(self, request, *args, **kwargs):
+        form = DisciplineAddForm(request.POST)
+        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form,})
+
+    def post(self, request, *args, **kwargs):
+        form = DisciplineAddForm(request.POST)
+        if form.is_valid():
+            f = form.save()
+            messages.error(request, "Дисциплина создана.")
+            return redirect('settings_disciplines')
+        else:
+            messages.error(request, "Проверьте поля формы.")
+        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form,})
+
+
+class DisciplineEdit(UpdateView):
+    model = Discipline
+    template_name = 'control/settings/edit/discipline_edit.html'
+    form_class = DisciplineAddForm
+
+    def get_success_url(self):
+        return reverse('settings_disciplines', args=None)
 
 
 class LessonDetail(DetailView):

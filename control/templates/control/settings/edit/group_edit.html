@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+
+{% block head %} {% endblock %}
+
+
+{% block body %}
+<div class="container">
+  <div class="row">
+    <div class="col">
+    </div>
+    <div class="col-6">
+      <div class="col col-lg-3"><a href="{% url 'settings_groups' %}" class="btn btn-primary">Назад</a></div>
+      <div class="col text-center">
+      <form method="post">
+        {% csrf_token %}
+        <div class="row">
+          <div class="col-12">
+            {{ form.name|as_crispy_field }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-8">
+            {{ form.course|as_crispy_field }}
+          </div>
+          <div class="col-4">
+            {{ form.max_users|as_crispy_field }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            {{ form.study_start|as_crispy_field }}
+          </div>
+          <div class="col-6">
+            {{ form.study_end|as_crispy_field }}
+          </div>
+        </div>
+        {{ form.students.as_hidden }}
+        {{ form.requests.as_hidden }}
+        <button class="btn btn-primary" type="submit">Создать группу</button>
+       </form>
+
+    </div>
+    </div>
+    <div class="col">
+    </div>
+  </div>
+</div>
+{% endblock %}
