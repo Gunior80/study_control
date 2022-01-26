@@ -28,7 +28,9 @@
     </div>
     <div class="col">
         <h4>Задания</h4>
-
+          {% for test in tests %}
+              <a href="{% url 'test' slug=lesson.discipline.course.slug pk=test.pk %}">{{ test.name }}</a>
+          {% endfor %}
     </div>
   </div>
   </div>

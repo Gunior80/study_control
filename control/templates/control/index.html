@@ -7,7 +7,17 @@
 {% block body %}
 
 
-<div class="container">
+<div class="row">
+  <div class="col-2">
+    <div class="text-center">
+      Наравления обучения
+      <br>
+      {% for direction in directions %}
+      <button   type="button" class="btn btn-primary" data-dismiss="modal" onclick='hideshow("a{{ direction.id }}")'>{{ direction.name }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-8">
   <h3>Курсы</h3>
   <ul class="nav nav-tabs">
   <li class="nav-item">
@@ -25,12 +35,12 @@
     <div class="row">
       {% if all_courses|length > 0 %}
         {% for course in all_courses %}
-        <div class="col-md-3 col-sm-6 col-12 col-xl-3" >
-          <div class="card h-100">
+        <div class="col-md-3 col-sm-6 col-12 col-xl-3 align-items-stretch a{{course.direction.id}}">
+          <div class="card ">
             {% if course.image %}
-              <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+              <img class="card-img-top" src="{{ course.image.url }}" alt="Превью">
             {% else %}
-              <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
+              <img class="card-img-top" src="{% static 'img/no_image.png' %}" alt="Превью">
             {% endif %}
             <div class="card-body">
               <h5 class="card-title">{{ course.name }}</h5>
@@ -70,8 +80,23 @@
     </div>
   </div>
   <div class="tab-pane fade" id="my">
-    Отзывы...
+
   </div>
 </div>
+    </div>
+    <div class="col-2"></div>
 </div>
+<script>
+function hideshow(id) {
+    var all = document.getElementsByClassName('align-items-stretch');
+
+    for (let i = 0; i < all.length; i++){
+          all[i].style.display = "none";
+    };
+    almost = document.getElementsByClassName(id);
+    for (let i = 0; i < almost.length; i++){
+          almost[i].style.display = "block";
+    };
+}
+</script>
 {% endblock %}

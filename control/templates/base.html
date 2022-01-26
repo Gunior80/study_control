@@ -27,14 +27,14 @@
             <a class="nav-link" href="/">Главная страница</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Преподаватели</a>
+            <a class="nav-link" href="#"></a>
           </li>
         </ul>
         <ul class="navbar-nav">
           {% if user.is_authenticated %}
             {% if user.is_staff %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'settings_dashboard' %}">Администрирование</a>
+                    <a class="nav-link" href="{% url 'settings_directions' %}">Администрирование</a>
                 </li>
                 <li class="nav-item">
                   <a class="nav-link" href="#">/</a>

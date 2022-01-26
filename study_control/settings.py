@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from filebrowser import settings
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -32,6 +34,8 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'tinymce',
+    'filebrowser',
+    "grappelli",
     'control',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,7 +44,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'crispy_forms',
-
 
 ]
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
@@ -127,8 +130,33 @@ LOGIN_REDIRECT_URL = '/'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-MEDIA_URL = '/uploads/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+FILEBROWSER_DIRECTORY = getattr(settings, "FILEBROWSER_DIRECTORY", 'uploads/')
+
+
+TINYMCE_DEFAULT_CONFIG = {
+    'plugins': '''
+            textcolor link image media preview codesample contextmenu
+            table code lists insertdatetime  contextmenu directionality visualblocks
+            visualchars code autolink lists charmap hr
+
+            ''',
+    'toolbar1': '''
+            bold italic underline | fontselect,
+            fontsizeselect  | forecolor | alignleft  
+            aligncenter alignright alignjustify | bullist numlist table |
+            | link image media |
+            ''',
+
+    'contextmenu': 'formats | link image',
+    'menubar': False,
+    'statusbar': True,
+    'height': 500,
+}
 
 MAX_IMAGE_SIZE = 5
 

@@ -1,6 +1,9 @@
 import datetime
 
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
@@ -11,6 +14,7 @@ from pytils.translit import slugify
 from tinymce import models as tinymce_models
 
 # Create your models here.
+from study_control.settings import MEDIA_URL
 
 
 class Profile(models.Model):
@@ -36,10 +40,24 @@ def save_user_profile(sender, instance, **kwargs):
 
 
 def upload_course(instance, filename):
-    return '{0}/{1}'.format(instance, filename)
+    return 'uploads/{0}/{1}'.format(instance, filename)
+
+
+class Direction(models.Model):
+    name = models.CharField(max_length=256, verbose_name="Направление", )
+
+    class Meta:
+        verbose_name = _("Направление обучения")
+        verbose_name_plural = _("Направления обучения")
+
+    def __str__(self):
+        return self.name
 
 
 class Course(models.Model):
+    direction = models.ForeignKey(Direction, verbose_name="Направление", null=True, default=None,
+                              related_name='course', on_delete=models.SET_NULL)
+
     name = models.CharField(max_length=256, verbose_name="Наименование курса", )
     image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course, blank=True)
     description = tinymce_models.HTMLField(blank=True, default='',
@@ -100,6 +118,9 @@ class Lesson(models.Model):
     def get_absolute_url(self):
         return reverse('lesson', kwargs={'slug': self.discipline.course.slug, 'pk': self.pk})
 
+    def __str__(self):
+        return '{0} - {1}'.format(self.discipline, self.name)
+
     class Meta:
         verbose_name = _("Занятие")
         verbose_name_plural = _("Занятия")
@@ -129,8 +150,70 @@ class Group(models.Model):
                 self.students.add(User.objects.get(pk=int(key)))
             self.requests.remove(User.objects.get(pk=int(key)))
 
+    def __str__(self):
+        return '{0} - {1}'.format(self.name, self.course)
+
     class Meta:
         verbose_name = _("Группа")
         verbose_name_plural = _("Группы")
 
 
+class Test(models.Model):
+    lesson = models.ForeignKey(Lesson, default=1, related_name='task', on_delete=models.CASCADE, verbose_name="Занятие", )
+    name = models.CharField(max_length=256, default="1", verbose_name="Наименование задания", )
+    time = models.PositiveIntegerField(default="5", verbose_name="Время на тест", )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Тест")
+        verbose_name_plural = _("Тесты")
+
+
+class Question(models.Model):
+    text = tinymce_models.HTMLField(blank=True, default='', verbose_name="Вопрос", )
+    test = models.ForeignKey(Test, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = _("Вопрос")
+        verbose_name_plural = _("Вопросы")
+
+    def get_absolute_url(self):
+        return reverse('question', kwargs={'pk': self.id})
+
+
+class Answer(models.Model):
+    text = models.CharField(max_length=256, verbose_name="Ответ")
+    question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE,
+                                 verbose_name="Название вопроса",)
+    correct = models.BooleanField(default=False, verbose_name="Верный ответ",)
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = _("Ответ")
+        verbose_name_plural = _("Ответы")
+
+
+class GroupTest(models.Model):
+    test = models.ForeignKey(Test, verbose_name="Тест", related_name='test', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, verbose_name="Группа", related_name='group', on_delete=models.CASCADE)
+    tryes = models.PositiveIntegerField(default=3, verbose_name="Количество попыток")
+    start = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
+    end = models.DateTimeField(verbose_name="Время конца контроля")
+
+'''
+class GroupTask(models.Model):
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    group = models.ForeignKey(Group, verbose_name="Группа", related_name='group', on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
+    end = models.DateTimeField(verbose_name="Время конца контроля")
+'''

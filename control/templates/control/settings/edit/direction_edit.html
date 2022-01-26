@@ -13,8 +13,8 @@
   <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
     <div class="row">
-      <div class="col col-lg-3"><a href="{% url 'settings_lessons' %}" class="btn btn-primary">Назад</a></div>
-      {% if lesson %}
+      <div class="col col-lg-3"><a href="{% url 'settings_directions' %}" class="btn btn-primary">Назад</a></div>
+      {% if direction %}
       <div class="col col-lg-6 text-right"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
       {% else %}
       <div class="col col-lg-6 text-right"><button type="submit" class="btn btn-primary">Сохранить</button></div>
@@ -23,12 +23,10 @@
   <br/>
   <div class="row">
     <div class="col-2">
-      <h4>{{ form.discipline|as_crispy_field }}</h4>
+
     </div>
     <div class="col-6">
-        <h4>{{ form.name|as_crispy_field }}</h4>
-        <h4>Описание занятия</h4>
-        {{ form.description }}
+        {{ form|crispy }}
     </div>
       <div class="col-2">
 

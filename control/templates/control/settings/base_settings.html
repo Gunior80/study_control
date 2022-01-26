@@ -8,6 +8,7 @@
   <script src="{% static 'js/highcharts.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.dataTables.min.css' %}" />
   <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
+  <block shead></block>
   <script type="text/javascript">
     $(document).ready(function() {
         $('#table').dataTable( {
@@ -21,10 +22,9 @@
 
 {% block body %}
 <div class="container">
-  <h3>Настройки курсов</h3>
   <ul class="nav nav-tabs">
     <li class="nav-item">
-    <a class="nav-link" href="{% url 'settings_dashboard' %}">Статистика системы</a>
+    <a class="nav-link" href="{% url 'settings_directions' %}">Направления обучения</a>
     </li>
     <li class="nav-item">
       <a class="nav-link" href="{% url 'settings_users' %}">Пользователи</a>
@@ -38,10 +38,14 @@
     <li class="nav-item">
       <a class="nav-link" href="{% url 'settings_disciplines' %}">Дисциплины</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'settings_lessons' %}">Занятия</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'settings_tests' %}">Задания</a>
+    </li>
   </ul>
-  <div class="tab-content">
-    {% block tab-content %}{% endblock %}
-  </div>
+  {% block tab-content %}{% endblock %}
 </div>
 
 

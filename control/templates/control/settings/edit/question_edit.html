@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load poll_extras %}
+{% load crispy_forms_tags %}
+
+{% block head %}
+  {{ form.media }}
+{% endblock %}
+
+
+{% block body %}
+<div class="container-fluid " style="width: 80%;">
+  <form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+    <div class="row">
+      <div class="col col-lg-3"><a href="" class="btn btn-primary">Назад</a></div>
+      {% if question %}
+      <div class="col col-lg-6 text-right"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
+      {% else %}
+      <div class="col col-lg-6 text-right"><button type="submit" class="btn btn-primary">Сохранить</button></div>
+      {% endif %}
+    </div>
+  <br/>
+  <div class="row">
+    <div class="col col-2">
+
+    </div>
+    <div class="col-6 ">
+        {{ form.text|as_crispy_field }}
+        <div class="hidden">{{ form.test }}</div>
+        {{ parent }}
+        {% for answer in answers %}
+            <div class="row form-inline ans_field">
+                <div class="col-8">{{ answer.text|as_crispy_field }}</div>
+                <div class="col-4 "><p></p>{{ answer.correct|as_crispy_field }}</div>
+                <br>
+            </div>
+        {% endfor %}
+        <a id="copy" class="btn btn-primary">Добавить ответ</a>
+    </div>
+
+      <div class="col-4">
+
+      </div>
+  </div>
+  </form>
+</div>
+<script>
+$(document).ready(()=>{
+            $("select").val("1").change();
+        });
+   $('#copy').click(function() {
+   var $data = $('.ans_field').first().clone().appendTo($('.dest'));
+      });
+</script>
+{% endblock %}

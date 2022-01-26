@@ -24,6 +24,7 @@
   <br/>
   <div class="row">
     <div class="col col-2">
+      {{ form.direction|as_crispy_field }}
       {% if course %}
         {% if course.image %}
           <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">

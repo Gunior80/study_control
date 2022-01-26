@@ -16,11 +16,13 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from django.urls import path
-
+from filebrowser.sites import site
 from control.admin import test_admin
 
 urlpatterns = [
+    url(r"^filebrowser/", site.urls),
     path('tinymce/', include('tinymce.urls')),
+    url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', test_admin.urls),
     url(r'^', include('control.urls')),
 ]

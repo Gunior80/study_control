@@ -18,3 +18,12 @@ def splitter(text):
     else:
         return text
 
+@register.filter(name='count_of_true_param')
+def count_of_true_param(values, arg):
+    count = 0
+    for value in values:
+        if getattr(value, arg):
+            count += 1
+    return count
+
+
