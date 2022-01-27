@@ -1,0 +1,51 @@
+{% extends 'control/settings/base_settings.html' %}
+{% load static %}
+
+{% load crispy_forms_tags %}
+
+{% block tab-content %}
+    <h3>Подробный результат теста "{{ resulttest.test.name }}" для {{ resulttest.user.last_name }} {{ resulttest.user.first_name }} {{ resulttest.user.profile.patronymic }}</h3>
+    <div>
+      <br/>
+      <div><td><a href="{% url 'test_results' pk=resulttest.test.pk %}" class="btn btn-primary">Назад</a></td></div>
+      <br/>
+      <table id="table" class="table table-striped table-bordered sortable">
+        <thead>
+          <tr>
+            <th class="th-sm">Вопросы</th>
+            <th class="th-sm">Ответы</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for question in resulttest.resultquestion.all %}
+          <tr>
+            <td class="text-center"> {{ question.text|safe }}</td>
+            <td width="40%" class="text-center">
+                {% for answer in question.resultanswer.all %}
+                {% if answer.given == True %}
+                    {% if answer.correct == True %}
+                        <p class="text-success">{{ forloop.counter }}) {{ answer.text }}</p>
+                    {% else %}
+                    <p class="text-danger">{{ forloop.counter }}) {{ answer.text }}</p>
+                    {% endif %}
+                {% else %}
+                    {% if answer.correct == True %}
+                        <p class="text-success">{{ forloop.counter }}) {{ answer.text }}</p>
+                    {% else %}
+                    <p>{{ forloop.counter }}) {{ answer.text }}</p>
+                    {% endif %}
+                {% endif %}
+                {% endfor %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="th-sm">Вопрос</th>
+            <th class="th-sm">Ответы</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+{% endblock %}

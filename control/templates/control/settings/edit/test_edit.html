@@ -29,6 +29,14 @@
         <div class="row">
             <div class="col-8">
                 {{ form.name|as_crispy_field }}
+                <div class="row">
+                    <div class="col-6">
+                        {{ form.tryes|as_crispy_field }}
+                    </div>
+                    <div class="col-6">
+                        {{ form.pass_percent|as_crispy_field }}
+                    </div>
+                </div>
             </div>
             <div class="col-4">
                 {{ form.time|as_crispy_field }}
@@ -40,30 +48,33 @@
                     {% if questions|length > 0 %}
                         <div class="row">
                             <div class="col-6">
-                                Вопрос
-                            </div>
-                            <div class="col-2">
-                                Верный
+                                <h4>Вопрос</h4>
                             </div>
                             <div class="col-4">
-                                Удалить
+                                <h4>Верный</h4>
+                            </div>
+                            <div class="col-2">
+                                <h4>Удалить</h4>
                             </div>
                         </div>
                         <br>
                         {% for question in questions %}
                         <div class="row">
                             <div class="col-6">
-                                {{ question.text|striptags|truncatechars:20|safe }}
-                            </div>
-                            <div class="col-2">
-                                {% if question.correct %}
-                                Да
-                                {% else %}
-                                Нет
-                                {% endif %}
+                                {{ question.text|striptags|safe }}
                             </div>
                             <div class="col-4">
-                                <form action="{% url 'question_del' pk=test.id pkq=question.pk %}" method="post">
+                                {% for answer in question.answer.all %}
+                                    {% if answer.correct == True %}
+                                        <p class="text-success">{{ forloop.counter }}) {{ answer.text }}</p>
+                                    {% else %}
+                                        <p> {{ forloop.counter }}) {{ answer.text }}</p>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="col-2">
+                                <form action="{% url 'question_del' pk=test.id %}" method="post">
+                                    <input hidden name="pkq" value="{{ question.pk }}">
                                     {% csrf_token %}
                                     <button class="btn btn-danger" type="submit" href="">Удалить</button>
                                 </form>
@@ -73,14 +84,14 @@
                     {% endfor %}
                     {% else %}
                         <div class="row">
-                            <div class="col-4">
+                            <div class="col-6">
                                 Вопросы отсутствуют
                             </div>
                             <div class="col-4">
 
                             </div>
-                            <div class="col-4">
-                                <a href="{% url 'question_add' pk=test.id %}" class="btn btn-primary">Создать вопрос</a>
+                            <div class="col-2">
+                                <a href="{% url 'question_add' %}" class="btn btn-primary">Создать вопрос</a>
                             </div>
                         </div>
                     {% endif %}
@@ -92,7 +103,7 @@
 
                             </div>
                             <div class="col-4">
-                                <a href="{% url 'question_add' pk=test.id %}" class="btn btn-primary">Создать вопрос</a>
+                                <a href="{% url 'question_add' %}" class="btn btn-primary">Создать вопрос</a>
                             </div>
                         </div>
                 {% endif %}

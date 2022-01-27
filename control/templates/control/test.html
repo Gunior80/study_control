@@ -16,23 +16,20 @@
         {% csrf_token %}
         <div id="progress-screen">
             {% for question in questions.all %}
-                {% if question.answers.all|count_of_true_param:"correct" > 0 %}
+                {% if question.answer.all|count_of_true_param:"correct" > 0 %}
                     <div id="{{ forloop.counter }}">
                         <div class="lead">{{ question.text|safe|linebreaks }}</div>
-                        {% if question.image %}
-                            <p style="text-align: center;"><img class="img-fluid" src="{{ question.image.url }}" style="max-height: 400px;" alt="image"></p>
-                        {% endif %}
                         <input type="hidden" value="{{question.id}}" name="question_id">
                         <hr/>
-                        {% if question.answers.all|count_of_true_param:"correct" == 1 %}
-                            {% for answer in question.answers.all %}
+                        {% if question.answer.all|count_of_true_param:"correct" == 1 %}
+                            {% for answer in question.answer.all %}
                                 <p><input class="radio" name="{{ question.id }}" type="radio" value="{{ answer.id }}">&nbsp;{{ answer.text }}</p>
                             {% endfor %}
                         {% else %}
-                            {% for answer in question.answers.all|shuffle %}
+                            {% for answer in question.answer.all|shuffle %}
                                 <p><input class="check" name="{{ question.id }}" type="checkbox" value="{{ answer.id }}">&nbsp;{{ answer.text }}</p>
                             {% endfor %}
-                            <p align="right">Количество ответов: не более <em class="count">{{ question.answers.all|count_of_true_param:"correct" }}</em></p>
+                            <p align="right">Количество ответов: не более <em class="count">{{ question.answer.all|count_of_true_param:"correct" }}</em></p>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -58,7 +55,7 @@
             </div>
     <div class="text-center text-info" style="display: block; bottom: 5px">Осталось: <em id="min">{{ test.time }}</em>:<em id="sec"></em></div>
 
-        <input id="next_url" type="hidden" value="">
+        <input id="next_url" type="hidden" value="{% url 'lesson' slug=test.lesson.discipline.course.slug pk=test.lesson.id %}">
         <input id="sync_url" type="hidden" value="{% url 'sync' %}">
     </form>
 

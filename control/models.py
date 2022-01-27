@@ -2,6 +2,7 @@ import datetime
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -85,6 +86,8 @@ class Course(models.Model):
                 old_self.image.delete(False)
         return super().save(*args, **kwargs)
 
+    def is_student(self, user):
+        return 1
 
 @receiver(pre_delete, sender=Course)
 def image_delete(sender, instance, **kwargs):
@@ -161,6 +164,9 @@ class Group(models.Model):
 class Test(models.Model):
     lesson = models.ForeignKey(Lesson, default=1, related_name='task', on_delete=models.CASCADE, verbose_name="Занятие", )
     name = models.CharField(max_length=256, default="1", verbose_name="Наименование задания", )
+    tryes = models.PositiveIntegerField(default=3, verbose_name="Количество попыток")
+    pass_percent = models.PositiveIntegerField(default=60, validators=[MinValueValidator(10),MaxValueValidator(100)],
+                                               verbose_name="Мин. процент")
     time = models.PositiveIntegerField(default="5", verbose_name="Время на тест", )
 
     def __str__(self):
@@ -185,10 +191,17 @@ class Question(models.Model):
     def get_absolute_url(self):
         return reverse('question', kwargs={'pk': self.id})
 
+    def get_answers(self):
+        answers = self.answer.all().filter(correct=True)
+        if answers.count() == 0:
+            return False
+        return answers
+
+
 
 class Answer(models.Model):
     text = models.CharField(max_length=256, verbose_name="Ответ")
-    question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE,
+    question = models.ForeignKey(Question, related_name='answer', on_delete=models.CASCADE,
                                  verbose_name="Название вопроса",)
     correct = models.BooleanField(default=False, verbose_name="Верный ответ",)
 
@@ -200,12 +213,86 @@ class Answer(models.Model):
         verbose_name_plural = _("Ответы")
 
 
+
+
+class ResultTest(models.Model):
+    test = models.ForeignKey(Test, related_name='resulttest',
+                             on_delete=models.CASCADE, verbose_name="Тест", )
+    user = models.ForeignKey(User, related_name='resulttest',
+                             on_delete=models.CASCADE, verbose_name="Учащийся", )
+    time = models.TimeField(verbose_name="Затраченное время", null=True, blank=True, )
+    start_time = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
+
+    def __str__(self):
+        return "{0} - {1} {2} {3}".format(self.test.name, self.user.first_name,
+                                          self.user.last_name, self.user.profile.patronymic,)
+
+    class Meta:
+        verbose_name = _("Результат теста")
+        verbose_name_plural = _("Результаты тестов")
+
+    def get_percent(self):
+        questions_count = self.resultquestion.all().count()
+        points = 0
+        for question in self.resultquestion.all():
+            flag = True
+            for answer in question.resultanswer.all():
+                if answer.correct != answer.given:
+                    flag = False
+                    break
+            if flag:
+                points+=1
+        return round((points / questions_count) * 100, 1)
+
+    def get_user_group(self):
+        if self.user.is_staff:
+            return "Администратор"
+        intercept = self.user.stud_user.all() & self.test.lesson.discipline.course.group.all()
+        return intercept.first().name
+
+
+
+
+class ResultQuestion(models.Model):
+    text = tinymce_models.HTMLField(blank=True, default='', verbose_name="Вопрос", )
+    test = models.ForeignKey(ResultTest, related_name='resultquestion',on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = _("Результат вопроса")
+        verbose_name_plural = _("Результаты вопросов")
+
+
+class ResultAnswer(models.Model):
+    text = models.CharField(max_length=256, verbose_name="Ответ")
+    question = models.ForeignKey(ResultQuestion, related_name='resultanswer', on_delete=models.CASCADE,
+                                 verbose_name="Название вопроса",)
+    correct = models.BooleanField(default=False, verbose_name="Верный ответ",)
+    given = models.BooleanField(default=False, verbose_name="Дан ответ",)
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = _("Результат ответа")
+        verbose_name_plural = _("Результат ответов")
+
+
+class GroupLesson(models.Model):
+    lesson = models.ForeignKey(Test, verbose_name="Занятие", related_name='grouplesson', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, verbose_name="Группа", related_name='grouplesson', on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала занятия", default=datetime.datetime.now())
+
+
 class GroupTest(models.Model):
-    test = models.ForeignKey(Test, verbose_name="Тест", related_name='test', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, verbose_name="Группа", related_name='group', on_delete=models.CASCADE)
-    tryes = models.PositiveIntegerField(default=3, verbose_name="Количество попыток")
+    test = models.ForeignKey(Test, verbose_name="Тест", related_name='grouptest', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, verbose_name="Группа", related_name='grouptest', on_delete=models.CASCADE)
     start = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
     end = models.DateTimeField(verbose_name="Время конца контроля")
+
+
 
 '''
 class GroupTask(models.Model):

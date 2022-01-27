@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta, time
+from time import gmtime
+
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -9,14 +11,20 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 # Create your views here.
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView, DetailView, UpdateView, ListView, CreateView
+from pytz import utc
 
 from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm, DisciplineAddForm, \
     LessonAddForm, TestAddForm, QuestionAddForm, AnswerAddForm, DirectionAddForm
-from control.models import Course, Discipline, Group, Lesson, Test, Question, Answer, Direction, GroupTest
+from control.models import Course, Discipline, Group, Lesson, Test, Question, Answer, Direction, GroupTest, ResultTest, \
+    ResultQuestion, ResultAnswer
 
 from filebrowser.sites import site
+
+from study_control import settings
+
 
 class Index(TemplateView):
     template_name = 'control/index.html'
@@ -474,27 +482,14 @@ class QuestionAdd(CreateView):
     template_name = 'control/settings/edit/question_edit.html'
 
     def get(self, request, *args, **kwargs):
-        self.parent = kwargs['pk']
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from django.forms import inlineformset_factory
         context['answers'] = inlineformset_factory(Question, Answer, fields=['text', 'correct'], extra=4)
-        context['parent'] = self.parent
-        print(context)
         return context
 
-    def post(self, request, *args, **kwargs):
-        print(request.POST)
-        return super().post(request, *args, **kwargs)
-    def form_valid(self, form):
-
-        test = form.save(commit=False)
-        test
-        test.save()
-
-        return redirect('test_edit', pk=test.id)
 
 
 class QuestionEdit(UpdateView):
@@ -507,9 +502,8 @@ class QuestionEdit(UpdateView):
 
 class QuestionDel(View):
     def post(self, request, *args, **kwargs):
-        print(kwargs)
         if request.user.is_staff:
-            question = Question.objects.get(pk=kwargs['pkq'])
+            question = Question.objects.get(pk=request.POST['pkq'])
             question.delete()
         return redirect('test_edit', pk=kwargs['pk'])
 
@@ -575,27 +569,22 @@ class TestView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(TestView, self).get_context_data(**kwargs)
-        context['questions'] = Question.objects.filter(answers__correct=True, test=kwargs['object']).distinct()
+        context['questions'] = Question.objects.filter(answer__correct=True, test=kwargs['object']).distinct()
         return context
 
     def get(self, request, *args, **kwargs):
         test_id = kwargs['pk']
         test = Test.objects.all().filter(id=test_id).first()
+        user_try = request.user.resulttest.all().count() + 1
 
-        if request.user.is_authenticated:
-            pass
-            '''
-            if models.Result.objects.filter(user=request.user, test=test_id).first() is None:
-                result = models.Result(user=request.user, test=test)
-                result.save()
-            else:
-                messages.error(request, 'Вы уже прошли задание - %s' % test.name)
-                return redirect(reverse('testing:test_list', kwargs=kwargs))
-            '''
+        if test.tryes >= user_try:
+            result = ResultTest(user=request.user, test=test, start_time=datetime.now())
+            result.save()
         else:
-            if test.logged is True:
-                messages.error(request, 'Вы не можете решать тестовые задания без авторизации')
-                return redirect(reverse('testing:test_list', kwargs=kwargs))
+            messages.error(request, 'Вы израсходовали все попытки - %s' % test.name)
+            return redirect(test.lesson.get_absolute_url())
+
+        request.session['try'] = user_try
         request.session['start_test_time'] = str(datetime.now())
         request.session['test'] = str(test.id)
         return super().get(self, request, *args, **kwargs)
@@ -603,51 +592,45 @@ class TestView(DetailView):
     def post(self, request, **kwargs):
         if request.POST:
             data = dict(request.POST)
+            test = Test.objects.all().filter(id=kwargs['pk']).first()
+            result = ResultTest.objects.filter(user=request.user, test=test).order_by('-start_time').first()
+            result.time = str((timezone.now() - result.start_time))  # Возникает варнинг по Таймзоне
+
+
             questions = Question.objects.all().filter(test_id=kwargs['pk'])
             dictionary = {}
+            resultadic = {}
             for question in questions:
+                q = ResultQuestion(test=result, text=question.text)
+                q.save()
                 dictionary[str(question.id)] = []
                 answers = Answer.objects.all().filter(question_id=question.id)
                 for answer in answers:
+                    a = ResultAnswer(question=q, text=answer.text, correct=answer.correct)
+                    a.save()
+                    resultadic[str(answer.id)] = str(a.id)
                     if answer.correct:
                         dictionary[str(question.id)].append(str(answer.id))
                 if len(dictionary[str(question.id)]) < 1:
                     del dictionary[str(question.id)]
-            over = len(dictionary)
-            test = Test.objects.all().filter(id=kwargs['pk']).first()
-            max_points = 0
-            points = 0
-            full_correct = 0
-            non_full_correct = 0
-            for key in dictionary.keys():
-                current_question = Question.objects.filter(id=key).first()
-                max_points += current_question.score
-                maxtrue = len(dictionary[key])
-                try:
-                    if maxtrue > 1:
-                        count = 0
-                        for element in dictionary[key]:
-                            if element in data[key]:
-                                count += 1
-                        if maxtrue == count:
-                            points += current_question.score
-                            full_correct += 1
-                        elif count > 0:
-                            non_full_correct += 1
-                            points += test.points
-                    elif dictionary[key] == data[key]:
-                        points += current_question.score
-                        full_correct += 1
-                except KeyError:
-                    continue
-            if request.user.is_authenticated:
-                if test.logged:
 
-                    msg = 'Тест завершен.'
-                    return HttpResponse(msg, content_type='text/plain')
-            msg = 'Тест завершен.\nНабрано баллов %d из %d\nПолных ответов: %d\nНеполных ответов: %d' % \
-                  (points, max_points, full_correct, non_full_correct)
+
+            del data['question_id']
+            del data['csrfmiddlewaretoken']
+            print(data)
+            if len(data):
+                for key in dictionary.keys():
+                    for id_ans in data[key]:
+                        ra = ResultAnswer.objects.get(pk=int(resultadic[str(id_ans)]))
+                        ra.given = True
+                        ra.save()
+            result.save()
+            if test.pass_percent > result.get_percent():
+                msg = 'Тест не пройден.'
+            else:
+                msg = 'Тест пройден.'
             return HttpResponse(msg, content_type='text/plain')
+
 
 
 class SyncTime(View):
@@ -657,8 +640,8 @@ class SyncTime(View):
             start_test_time = request.session.get('start_test_time')
             if start_test_time is None:
                 return HttpResponse(JsonResponse(data_response), content_type="application/json")
-            then = datetime.datetime.strptime(start_test_time, '%Y-%m-%d %H:%M:%S.%f')
-            now = datetime.datetime.now()
+            then = datetime.strptime(start_test_time, '%Y-%m-%d %H:%M:%S.%f')
+            now = datetime.now()
             delta_now = now - then
             test_id = request.session.get('test')
             if test_id is None:
@@ -666,8 +649,34 @@ class SyncTime(View):
             test = Test.objects.filter(id=test_id).first()
             if test is None:
                 return HttpResponse(JsonResponse(data_response), content_type="application/json")
-            over_time = datetime.timedelta(minutes=test.time)
+            over_time = timedelta(minutes=test.time)
             delta = over_time - delta_now
             total_seconds = delta.total_seconds()
             data_response = {'min': total_seconds // 60, 'sec': int(total_seconds % 60)}
             return HttpResponse(JsonResponse(data_response), content_type="application/json")
+
+
+class TestResultsView(DetailView):
+    model = Test
+    template_name = 'control/settings/test_results.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TestResultsView, self).get_context_data(**kwargs)
+        context['resulttests'] = ResultTest.objects.all().filter(test=kwargs['object'])
+        return context
+
+    def post(self, request, **kwargs):
+        if request.POST:
+            if request.user.is_staff:
+                result = ResultTest.objects.get(pk=request.POST['result'])
+                result.delete()
+        return redirect('test_results', pk=kwargs['pk'])
+
+
+class TestDetailView(DetailView):
+    model = ResultTest
+    template_name = 'control/settings/test_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(TestDetailView, self).get_context_data(**kwargs)
+        return context

@@ -4,7 +4,7 @@
 {% load crispy_forms_tags %}
 
 {% block tab-content %}
-    <h3>Занятия</h3>
+    <h3>Тестовые задания</h3>
     <div>
       <br/>
       <div class="text-right"><td><a href="{% url 'test_add' %}" class="btn btn-primary">Создать</a></td></div>
@@ -14,6 +14,9 @@
           <tr>
             <th class="th-sm">Задание</th>
             <th class="th-sm">Занятие</th>
+            <th class="th-sm">Дисциплина</th>
+            <th class="th-sm">Курс</th>
+            <th class="th-sm">Результаты</th>
             <th class="th-sm">Редактировать</th>
             <th class="th-sm">Удалить Задание</th>
           </tr>
@@ -21,10 +24,13 @@
         <tbody>
         {% for test in tests %}
           <tr>
-            <td>{{ test.name }}</td>
-            <td>{{ test.lesson.name }}</td>
-            <td><a href="{% url 'test_edit' pk=test.pk %}">Редактировать</a></td>
-            <td>
+            <td class="text-center">{{ test.name }}</td>
+            <td class="text-center">{{ test.lesson.name }}</td>
+            <td class="text-center">{{ test.lesson.discipline.name }}</td>
+            <td class="text-center">{{ test.lesson.discipline.course.name }}</td>
+            <td class="text-center"><a href="{% url 'test_results' pk=test.pk %}">Просмотреть</a></td>
+            <td class="text-center"><a href="{% url 'test_edit' pk=test.pk %}">Редактировать</a></td>
+            <td class="text-center">
               <form action="{% url 'test_del' pk=test.pk %}" method="post">
                   {% csrf_token %}
                   <button class="btn btn-danger" type="submit" href="">Удалить</button>
@@ -36,6 +42,9 @@
           <tr>
             <th class="th-sm">Задание</th>
             <th class="th-sm">Занятие</th>
+            <th class="th-sm">Дисциплина</th>
+            <th class="th-sm">Курс</th>
+            <th class="th-sm">Результаты</th>
             <th class="th-sm">Редактировать</th>
             <th class="th-sm">Удалить Задание</th>
           </tr>

@@ -20,25 +20,30 @@
         <div class="text-center">
             <br>
             {% if groups|length > 0 %}
-                <h5>Текущие наборы:</h5>
-                {% for group in groups %}
-                    <div>Дата начала</div>
-                    <div>{{ group.study_start }}</div>
-                    {% if request.user in group.requests.all %}
-                    <form action="{% url 'unrequest' slug=course.slug %}" method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="group_id" value="{{ group.id }}">
-                        <button type="submit" class="btn btn-primary">Отменить заявку</button>
-                    </form>
-                    {% else %}
-                    <form action="{% url 'request' slug=course.slug %}" method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="group_id" value="{{ group.id }}">
-                        <button type="submit" class="btn btn-primary">Подать заявку</button>
-                    </form>
-                    {% endif %}
-                    <br/>
-                {% endfor %}
+                {% if request.user.is_authenticated %}
+
+                    <h5>Текущие наборы:</h5>
+                    {% for group in groups %}
+                        <div>Дата начала</div>
+                        <div>{{ group.study_start }}</div>
+                        {% if request.user in group.requests.all %}
+                        <form action="{% url 'unrequest' slug=course.slug %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="group_id" value="{{ group.id }}">
+                            <button type="submit" class="btn btn-primary">Отменить заявку</button>
+                        </form>
+                        {% else %}
+                        <form action="{% url 'request' slug=course.slug %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="group_id" value="{{ group.id }}">
+                            <button type="submit" class="btn btn-primary">Подать заявку</button>
+                        </form>
+                        {% endif %}
+                        <br/>
+                    {% endfor %}
+                {% else %}
+                    <div>Для подачи заявки необходимо авторизоваться.</div>
+                {% endif %}
             {% else %}
                 <div>В данный момент набор на курс не ведется.</div>
             {% endif %}
@@ -54,7 +59,11 @@
         <dl>
             <dt>{{ discipline.name }}</dt>
             {% for lesson in discipline.lesson.all %}
-            <dd><a class="nav-link" href="{% url 'lesson' slug=course.slug pk=lesson.id %}">{{ lesson.name }}</a></dd>
+            {% if request.user.is_authenticated %}
+                <dd><a class="nav-link" href="{% url 'lesson' slug=course.slug pk=lesson.id %}">{{ lesson.name }}</a></dd>
+            {% else %}
+                <dd>{{ lesson.name }}</dd>
+            {% endif %}
             {% endfor %}
         </dl>
         {% endfor %}

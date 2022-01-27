@@ -23,7 +23,7 @@ from control.views import Index, Registration, Login, CourseDetail, CourseAdd, C
     Unrequest, GroupRequests, GroupStudents, DisciplineAdmin, DisciplineAdd, DisciplineEdit, LessonAdmin, LessonAdd, \
     LessonEdit, LessonDel, TestAdmin, TestAdd, TestEdit, TestDel, QuestionAdd, QuestionEdit, QuestionDel, TestView, \
     DirectionAdmin, DirectionAdd, DirectionEdit, DirectionDel, SyncTime, GroupTestAdd, GroupTestEdit, GroupTestDel, \
-    GroupTestAdmin
+    GroupTestAdmin, TestResultsView, TestDetailView
 from django.contrib.auth.views import LogoutView
 
 
@@ -77,6 +77,9 @@ urlpatterns = [
     path('settings/test/add', login_required(TestAdd.as_view()), name='test_add'),
     path('settings/test/<int:pk>/edit', login_required(TestEdit.as_view()), name='test_edit'),
     path('settings/test/<int:pk>/del', login_required(TestDel.as_view()), name='test_del'),
+    path('settings/test/<int:pk>/results', login_required(TestResultsView.as_view()), name='test_results'),
+    path('settings/test/<int:pk>/detail-result', login_required(TestDetailView.as_view()), name='test_detail'),
+
 
     path('settings/question/add', login_required(QuestionAdd.as_view()), name='question_add'),
     path('settings/question/<int:pk>/edit', login_required(QuestionEdit.as_view()), name='question_edit'),
