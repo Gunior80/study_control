@@ -1,0 +1,111 @@
+{% extends 'control/settings/base_settings.html' %}
+{% load static %}
+{% load poll_extras %}
+
+{% load crispy_forms_tags %}
+
+{% block shead %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/jquery.datetimepicker.min.css' %}"/>
+<script src="{% static 'js/jquery.datetimepicker.full.min.js' %}"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+      jQuery.datetimepicker.setLocale('ru');
+        jQuery('.datetime').datetimepicker({
+        minDate:'{{ group.study_start.year }}/{{ group.study_start.month }}/{{ group.study_start.day }}',
+        maxDate:'{{ group.study_end.year }}/{{ group.study_end.month }}/{{ group.study_end.day }}',
+        format:'Y-m-d H:i'
+        });
+    });
+  </script>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid " style="width: 80%;">
+<h3>Расписание группы {{ group.name }} "{{ group.course }}"</h3>
+  <form action="{% url 'group_plan' pk=group.pk %}" method="post">
+    {% csrf_token %}
+    <div>
+      <br/>
+      <div class="row">
+      <div class="col"><a href="{% url 'settings_groups' %}" class="btn btn-primary">Назад</a></div>
+      <div class="col text-right"><button type="submit" href="" class="btn btn-primary">Сохранить</button></div>
+      </div>
+      <br/>
+      <table id="table" class="table table-striped table-bordered sortable ">
+        <thead>
+          <tr>
+            <th class="th-sm">Дисциплина</th>
+            <th class="th-sm">Занятие</th>
+            <th class="th-sm">Время начала занятия</th>
+            <th class="th-sm">Временной диапазон доступности задания</th>
+
+          </tr>
+        </thead>
+        <tbody>
+        {% for discipline in group.course.discipline.all %}
+          {% for lesson in discipline.lesson.all %}
+            <tr>
+              <td>{{ discipline.name }}</td>
+              <td>{{ lesson.name }}</td>
+              <td>
+                {% if group.course|is_owner:request.user %}
+                  <input class="datetime" id="{{ lesson.id }}" name="{{ lesson.id }}" type="text" value="{{ group_plan|collide_lesson:lesson.id }}">
+                {% else %}
+                  <div>{{ group_plan|collide_lesson:lesson.id }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% for test in lesson.test.all %}
+                <div class="row">
+                  <div class="col">
+                    {{ test.name }}
+                  </div>
+                  <div class="col">
+                    {% if discipline|is_teacher:request.user %}
+                      <input class="datetime" id="test_start_{{ test.id }}" name="test_start_{{ test.id }}" type="text" value="{{ group_test|collide_test_start:test.id }}">
+                      <input class="datetime" id="test_end_{{ test.id }}" name="test_end_{{ test.id }}" type="text" value="{{ group_test|collide_test_end:test.id }}">
+                    {% else %}
+                      <div>{{ group_test|collide_test_start:test.id }}</div>
+                      <div>{{ group_test|collide_test_end:test.id }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                </br>
+                {% endfor %}
+
+                {% for filetask in lesson.filetask.all %}
+                <div class="row">
+                  <div class="col">
+                    {{ filetask.name }}
+                  </div>
+                  <div class="col">
+                    {% if discipline|is_teacher:request.user %}
+                      <input class="datetime" id="file_start_{{ filetask.id }}" name="file_start_{{ filetask.id }}" type="text" value="{{ group_file|collide_file_start:filetask.id }}">
+                      <input class="datetime" id="file_end_{{ filetask.id }}" name="file_end_{{ filetask.id }}" type="text" value="{{ group_file|collide_file_end:filetask.id }}">
+                    {% else %}
+                      <div>{{ group_file|collide_file_start:filetask.id }}</div>
+                      <div>{{ group_file|collide_file_end:filetask.id }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                </br>
+                {% endfor %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="th-sm">Дисциплина</th>
+            <th class="th-sm">Занятие</th>
+            <th class="th-sm">Время начала</th>
+            <th class="th-sm">Задания</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

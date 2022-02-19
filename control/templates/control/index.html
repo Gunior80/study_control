@@ -26,9 +26,13 @@
   <li class="nav-item">
     <a class="nav-link" data-toggle="tab" href="#avaible">Доступные</a>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" data-toggle="tab" href="#my">Мои</a>
-  </li>
+  {% if user.is_authenticated %}
+    {% if my_courses|length > 0 %}
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#my">Мои</a>
+    </li>
+    {% endif %}
+  {% endif %}
 </ul>
 <div class="tab-content">
   <div class="tab-pane fade show active" id="all">
@@ -80,7 +84,26 @@
     </div>
   </div>
   <div class="tab-pane fade" id="my">
-
+    {% if user.is_authenticated %}
+      {% if my_courses|length > 0 %}
+        {% for course in my_courses %}
+          <div class="col-md-3 col-sm-6 col-12 col-xl-3" >
+            <div class="card h-100">
+              {% if course.image %}
+                <img class="card-img-top" width="10rem" src="{{ course.image.url }}" alt="Превью">
+              {% else %}
+                <img class="card-img-top" width="10rem" src="{% static 'img/no_image.png' %}" alt="Превью">
+              {% endif %}
+              <div class="card-body">
+                <h5 class="card-title">{{ course.name }}</h5>
+                <p class="card-text">{{ course.description|striptags|truncatechars:50|safe }}</p>
+                <a href="{{ course.get_absolute_url }}" class="btn btn-primary">Больше о курсе</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endif %}
   </div>
 </div>
     </div>

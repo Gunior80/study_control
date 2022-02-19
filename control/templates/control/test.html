@@ -15,14 +15,14 @@
 <form method="POST" id="testform" action="javascript:void(null);">
         {% csrf_token %}
         <div id="progress-screen">
-            {% for question in questions.all %}
+            {% for question in questions.all|shuffle %}
                 {% if question.answer.all|count_of_true_param:"correct" > 0 %}
                     <div id="{{ forloop.counter }}">
                         <div class="lead">{{ question.text|safe|linebreaks }}</div>
                         <input type="hidden" value="{{question.id}}" name="question_id">
                         <hr/>
                         {% if question.answer.all|count_of_true_param:"correct" == 1 %}
-                            {% for answer in question.answer.all %}
+                            {% for answer in question.answer.all|shuffle %}
                                 <p><input class="radio" name="{{ question.id }}" type="radio" value="{{ answer.id }}">&nbsp;{{ answer.text }}</p>
                             {% endfor %}
                         {% else %}

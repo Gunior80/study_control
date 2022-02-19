@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load poll_extras %}
 
 {% block head %} {% endblock %}
 
@@ -28,9 +29,30 @@
     </div>
     <div class="col">
         <h4>Задания</h4>
-          {% for test in tests %}
-              <a href="{% url 'test' slug=lesson.discipline.course.slug pk=test.pk %}">{{ test.name }}</a>
-          {% endfor %}
+            {% for test_plan in group_test %}
+                <p>
+                    {% if test_plan.test|is_passed:request.user %}
+                        Пройден -
+                    {% else %}
+                        Не пройден -
+                    {% endif %}
+                    {% if test_plan.in_timerange %}
+                        <a href="{% url 'test' slug=lesson.discipline.course.slug pk=test_plan.test.pk %}">{{ test_plan.test.name }}</a>
+                    {% else %}
+                        {{ test_plan.test.name }} (Доступен с {{ test_plan.start }} по {{ test_plan.end }} )
+                    {% endif %}
+                </p>
+            {% endfor %}
+            {% for file_plan in group_file %}
+                <p>
+                    {{ file_plan.file|is_accepted:request.user }} -
+                    {% if file_plan.in_timerange %} -
+                        <a href="{% url 'file' slug=lesson.discipline.course.slug pk=file_plan.file.pk %}">{{ file_plan.file.name }}</a>
+                    {% else %}
+                        {{ file_plan.file.name }} (Доступен с {{ file_plan.start }} по {{ file_plan.end }} )
+                    {% endif %}
+                </p>
+            {% endfor %}
     </div>
   </div>
   </div>

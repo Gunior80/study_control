@@ -1,0 +1,52 @@
+{% extends 'control/settings/base_settings.html' %}
+{% load static %}
+{% load poll_extras %}
+
+{% load crispy_forms_tags %}
+
+{% block shead %}{% endblock %}
+
+{% block body %}
+<div class="container-fluid " style="width: 80%;">
+  <h3>Успеваемость группы {{ group.name }} "{{ group.course }}"</h3>
+      <br/>
+      <a href="{% url 'settings_groups' %}" class="btn btn-primary">Назад</a>
+      <br/>
+      <br/>
+      {% for user in group.students.all %}
+      <h3>{{ user.last_name }} {{ user.first_name }} {{ user.profile.patronymic }}</h3>
+      <table id="table" class="table table-striped table-bordered sortable ">
+        <thead>
+          <tr>
+            <th class="th-sm text-center">Дисциплина</th>
+            <th class="th-sm text-center">Занятие</th>
+            <th class="th-sm text-center">Задание</th>
+            <th class="th-sm text-center">Результат</th>
+          </tr>
+        </thead>
+        <tbody>
+            {% for discipline in group.course.discipline.all %}
+                {% for lesson in discipline.lesson.all %}
+                    <tr>
+                      <td class="text-center">{{ discipline }}</td>
+                      <td class="text-center">{{ lesson }}</td>
+                      <td class="text-center"></td>
+                      <td class="text-center"></td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="th-sm text-center">Дисциплина</th>
+            <th class="th-sm text-center">Занятие</th>
+            <th class="th-sm text-center">Задание</th>
+            <th class="th-sm text-center">Результат</th>
+          </tr>
+        </tfoot>
+      </table>
+      <br/>
+      {% endfor %}
+</div>
+
+{% endblock %}

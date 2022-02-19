@@ -1,0 +1,59 @@
+{% extends 'control/settings/base_settings.html' %}
+{% load static %}
+
+{% load crispy_forms_tags %}
+
+{% block tab-content %}
+    <h3>Результаты - "{{ filetask.name }}"</h3>
+      <form action="" method="post">
+      <br/>
+      <div class="text-right"><td><button type="submit" href="" class="btn btn-primary">Сохранить</button></td></div>
+      <br/>
+
+        {% csrf_token %}
+
+      <table id="table" class="table table-striped table-bordered sortable">
+        <thead>
+          <tr>
+            <th class="th-sm text-center">Учащийся</th>
+            <th class="th-sm text-center">Группа</th>
+            <th class="th-sm text-center">Ссылка на файл</th>
+            <th class="th-sm text-center">Статус</th>
+
+          </tr>
+        </thead>
+        <tbody>
+        {% for result in resultfiles %}
+          <tr>
+            <td class="text-center">{{ result.user.last_name }} {{ result.user.first_name }} {{ result.user.profile.patronymic }}</td>
+            <td class="text-center">{{ result.get_user_group }}</td>
+            <td class="text-center"><a target="_blank" href="{{ result.file.url }}">Загрузить</a></td>
+            <td class="text-center">
+              {% if result.accepted != None %}
+                {% if result.accepted %} Зачтено {% else %} Не зачтено {% endif %}
+              {% else %}
+              <div>
+                  <input class="form-check-input" id="{{ result.id }}_true" type="radio" name="{{ result.id }}" value="1" autocomplete="off">
+                  <label for="{{ result.id }}_true">Зачтено</label>
+              </div>
+              <div>
+                  <input class="form-check-input" id="{{ result.id }}_false" type="radio" name="{{ result.id }}" value="0" autocomplete="off">
+                  <label for="{{ result.id }}_false">Не зачтено</label>
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="th-sm text-center">Учащийся</th>
+            <th class="th-sm text-center">Группа</th>
+            <th class="th-sm text-center">Зачтен</th>
+            <th class="th-sm text-center">Подробнее</th>
+
+          </tr>
+        </tfoot>
+      </table>
+    </form>
+{% endblock %}

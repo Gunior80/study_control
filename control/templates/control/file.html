@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load poll_extras %}
+{% load crispy_forms_tags %}
+
+{% block head %}{% endblock %}
+
+
+{% block body %}
+<div class="container-fluid " style="width: 80%;">
+  <form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <br/>
+  <div class="row">
+    <div class="col-2">
+      <h4></h4>
+    </div>
+    <div class="col-6">
+        <h4>{{ filetask.name }}</h4>
+        <br/>
+        {{ filetask.description|safe }}
+    </div>
+      <div class="col-2">
+          <div class="text-right"><button type="submit" class="btn btn-primary">Отправить</button></div>
+          {{ form.file|as_crispy_field }}
+      </div>
+  </div>
+  </form>
+</div>
+{% endblock %}

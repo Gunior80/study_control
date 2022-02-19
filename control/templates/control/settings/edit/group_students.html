@@ -15,7 +15,6 @@
       <thead>
         <tr>
           <th class="th-sm">ФИО</th>
-          <th class="th-sm">Успеваемость по курсу "{{ group.course.name }}"</th>
           <th class="th-sm">Исключить из группы</th>
         </tr>
       </thead>
@@ -23,7 +22,6 @@
         {% for student in group.students.all %}
           <tr>
             <td>{{ student.last_name }} {{ student.first_name }} {{ student.profile.patronymic }}</td>
-            <td></td>
             <td>
               <form  action="{% url 'students_group' pk=group.pk %}" method="post">
                 {% csrf_token %}
@@ -37,7 +35,6 @@
       <tfoot>
         <tr>
           <th class="th-sm">ФИО</th>
-          <th class="th-sm">Успеваемость по курсу {{ group.course.name }}</th>
           <th class="th-sm">Исключить из группы</th>
         </tr>
       </tfoot>

@@ -4,18 +4,18 @@
 {% load crispy_forms_tags %}
 
 {% block tab-content %}
-  <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs">
       <li class="nav-item">
       <a class="nav-link" href="{% url 'settings_tests' %}">Тесты</a>
       </li>
       <li class="nav-item">
         <a class="nav-link" href="{% url 'settings_files' %}">Файлы</a>
       </li>
-  </ul>
-    <h3>Тестовые задания</h3>
+    </ul>
+    <h3>Файлы</h3>
     <div>
       <br/>
-      <div class="text-right"><td><a href="{% url 'test_add' %}" class="btn btn-primary">Создать</a></td></div>
+      <div class="text-right"><td><a href="{% url 'file_add' %}" class="btn btn-primary">Создать</a></td></div>
       <br/>
       <table id="table" class="table table-striped table-bordered sortable">
         <thead>
@@ -30,16 +30,16 @@
           </tr>
         </thead>
         <tbody>
-        {% for test in tests %}
+        {% for file in files %}
           <tr>
-            <td class="text-center">{{ test.name }}</td>
-            <td class="text-center">{{ test.lesson.name }}</td>
-            <td class="text-center">{{ test.lesson.discipline.name }}</td>
-            <td class="text-center">{{ test.lesson.discipline.course.name }}</td>
-            <td class="text-center"><a class="btn btn-primary" href="{% url 'test_results' pk=test.pk %}">Просмотреть</a></td>
-            <td class="text-center"><a class="btn btn-primary" href="{% url 'test_edit' pk=test.pk %}">Редактировать</a></td>
+            <td class="text-center">{{ file.name }}</td>
+            <td class="text-center">{{ file.lesson.name }}</td>
+            <td class="text-center">{{ file.lesson.discipline.name }}</td>
+            <td class="text-center">{{ file.lesson.discipline.course.name }}</td>
+            <td class="text-center"><a class="btn btn-primary" href="{% url 'file_results' pk=file.pk %}">Просмотреть</a></td>
+            <td class="text-center"><a class="btn btn-primary" href="{% url 'file_edit' pk=file.pk %}">Редактировать</a></td>
             <td class="text-center">
-              <form action="{% url 'test_del' pk=test.pk %}" method="post">
+              <form action="{% url 'file_del' pk=file.pk %}" method="post">
                   {% csrf_token %}
                   <button class="btn btn-danger" type="submit" href="">Удалить</button>
               </form>

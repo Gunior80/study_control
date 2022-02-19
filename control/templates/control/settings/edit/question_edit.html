@@ -10,10 +10,11 @@
 
 {% block body %}
 <div class="container-fluid " style="width: 80%;">
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" >
+  <input type="hidden" name="next" value="{{ parent }}" />
   {% csrf_token %}
     <div class="row">
-      <div class="col col-lg-3"><a href="" class="btn btn-primary">Назад</a></div>
+      <div class="col col-lg-6"><a href="{% url 'test_edit' parent %}" class="btn btn-primary">Назад</a></div>
       {% if question %}
       <div class="col col-lg-6 text-right"><button type="submit" value="Update" class="btn btn-primary">Сохранить</button></div>
       {% else %}
@@ -21,36 +22,58 @@
       {% endif %}
     </div>
   <br/>
-  <div class="row">
-    <div class="col col-2">
+      <div class='row'>
 
-    </div>
-    <div class="col-6 ">
-        {{ form.text|as_crispy_field }}
-        <div class="hidden">{{ form.test }}</div>
-        {{ parent }}
-        {% for answer in answers %}
-            <div class="row form-inline ans_field">
-                <div class="col-8">{{ answer.text|as_crispy_field }}</div>
-                <div class="col-4 "><p></p>{{ answer.correct|as_crispy_field }}</div>
-                <br>
-            </div>
-        {% endfor %}
-        <a id="copy" class="btn btn-primary">Добавить ответ</a>
-    </div>
-
-      <div class="col-4">
-
+          <div class='col'>
+              {{ form.text }}
+              <div hidden>{{ form.test}}</div>
+          </div>
+          <div class='col'>
+              {{ answers.management_form }}
+              {% for answer in answers.forms %}
+                  <div class="table">
+                      <table class='no_error'>
+                      <div class='row'>
+                          <div hidden>{{ answer.id }}</div>
+                          <div hidden>{{ answer.question }}</div>
+                          <div class='col'>{{ answer.text }}</div>
+                          <div class='col'>Верный ответ {{ answer.correct }}</div>
+                          <div class='col'>{% if question %} Удалить {{ answer.DELETE }}{% endif %}</div>
+                      </div>
+                      </table>
+                  </div>
+              {% endfor %}
+              <input type="button" class="btn btn-primary" value="Добавить ответ" id="add_more">
+          </div>
       </div>
-  </div>
+
+
   </form>
 </div>
 <script>
-$(document).ready(()=>{
-            $("select").val("1").change();
+    function cloneMore(selector, type) {
+        var newElement = $(selector).clone(true);
+        var total = $('#id_' + type + '-TOTAL_FORMS').val();
+        newElement.find(':input').each(function() {
+            var name = $(this).attr('name').replace('-' + (total-1) + '-','-' + total + '-');
+            var id = 'id_' + name;
+            if ($(this).attr('type') != 'hidden') {
+                $(this).val('');
+                $(this).removeAttr( "value" );
+            }
+            $(this).attr({'name': name, 'id': id}).removeAttr('checked');
         });
-   $('#copy').click(function() {
-   var $data = $('.ans_field').first().clone().appendTo($('.dest'));
-      });
+        newElement.find('label').each(function() {
+            var newFor = $(this).attr('for').replace('-' + (total-1) + '-','-' + total + '-');
+            $(this).attr('for', newFor);
+        });
+        total++;
+        $('#id_' + type + '-TOTAL_FORMS').val(total);
+        $(selector).after(newElement);
+    }
+
+    $('#add_more').click(function() {
+        cloneMore('div.table:last', 'form');
+    });
 </script>
 {% endblock %}

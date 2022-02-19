@@ -8,7 +8,7 @@
   <script src="{% static 'js/highcharts.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.dataTables.min.css' %}" />
   <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
-  <block shead></block>
+  {% block shead %}{% endblock %}
   <script type="text/javascript">
     $(document).ready(function() {
         $('#table').dataTable( {
@@ -27,12 +27,6 @@
     <a class="nav-link" href="{% url 'settings_directions' %}">Направления обучения</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'settings_users' %}">Пользователи</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'settings_groups' %}">Группы</a>
-    </li>
-    <li class="nav-item">
       <a class="nav-link" href="{% url 'settings_courses' %}">Курсы</a>
     </li>
     <li class="nav-item">
@@ -42,8 +36,16 @@
       <a class="nav-link" href="{% url 'settings_lessons' %}">Занятия</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'settings_tests' %}">Тестовые задания</a>
+      <a class="nav-link" href="{% url 'settings_tests' %}">Задания</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'settings_groups' %}">Группы</a>
+    </li>
+    {% if request.user.is_superuser %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'settings_users' %}">Пользователи</a>
+      </li>
+    {% endif %}
   </ul>
   {% block tab-content %}{% endblock %}
 </div>

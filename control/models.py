@@ -4,8 +4,9 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
@@ -14,11 +15,11 @@ from django.dispatch import receiver
 from pytils.translit import slugify
 from tinymce import models as tinymce_models
 
-# Create your models here.
-from study_control.settings import MEDIA_URL
+from study_control.settings import FILE_CHOISE_EXTENSIONS
 
 
 class Profile(models.Model):
+    # Расширение модели пользователя
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     patronymic = models.CharField(max_length=150, blank=True, verbose_name="Отчество", )
     birth_date = models.DateField(null=True, blank=True)
@@ -40,6 +41,14 @@ def save_user_profile(sender, instance, **kwargs):
     instance.profile.save()
 
 
+class UserFullName(User):
+    class Meta:
+        proxy = True
+
+    def __str__(self):
+        return '{0} {1} {2}'.format(self.last_name, self.profile.patronymic, self.first_name)
+
+
 def upload_course(instance, filename):
     return 'uploads/{0}/{1}'.format(instance, filename)
 
@@ -57,16 +66,16 @@ class Direction(models.Model):
 
 class Course(models.Model):
     direction = models.ForeignKey(Direction, verbose_name="Направление", null=True, default=None,
-                              related_name='course', on_delete=models.SET_NULL)
+                                  related_name='course', on_delete=models.SET_NULL)
 
     name = models.CharField(max_length=256, verbose_name="Наименование курса", )
     image = models.ImageField(verbose_name="Превью курса", upload_to=upload_course, blank=True)
     description = tinymce_models.HTMLField(blank=True, default='',
                                            verbose_name="Описание курса", )
     slug = models.SlugField(default='', unique=True)
-    owner = models.ForeignKey(User, verbose_name="Заведующий курсом", null=True, default=None,
+    owner = models.ForeignKey(UserFullName, verbose_name="Заведующий курсом", null=True, default=None,
                               related_name='owner', on_delete=models.SET_NULL,
-                              limit_choices_to={'is_staff': True})
+                              limit_choices_to={'is_staff': True}, )
 
     class Meta:
         verbose_name = _("Курс")
@@ -86,8 +95,12 @@ class Course(models.Model):
                 old_self.image.delete(False)
         return super().save(*args, **kwargs)
 
-    def is_student(self, user):
-        return 1
+    def studied_user(self,user):
+        return self.group.filter(students=user).exists()
+
+    def is_owner(self, user):
+        return self.owner == user
+
 
 @receiver(pre_delete, sender=Course)
 def image_delete(sender, instance, **kwargs):
@@ -97,20 +110,27 @@ def image_delete(sender, instance, **kwargs):
 
 class Discipline(models.Model):
     name = models.CharField(verbose_name="Наименование дисциплины", max_length=256)
-    description = tinymce_models.HTMLField(blank=True, default='',
-                                           verbose_name="Описание дисциплины", )
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='discipline', on_delete=models.CASCADE)
-    teacher = models.ForeignKey(User, verbose_name="Преподаватель", related_name='discipline',
+    teacher = models.ForeignKey(UserFullName, verbose_name="Преподаватель", related_name='discipline',
                                 null=True, default=None, on_delete=models.SET_DEFAULT,
                                 limit_choices_to={'is_staff': True})
 
     def __str__(self):
         return self.name
 
+    def is_group_plan(self, group):
+        return group.grouplesson.all().filter(start__isnull=False, lesson__in=self.lesson.all()).count()
+
+    def is_teacher(self, user):
+        return self.teacher == user
+
     class Meta:
         verbose_name = _("Дисциплина")
         verbose_name_plural = _("Дисциплины")
 
+class LessonInGroup(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(groupplan__lesson='Roald Dahl')
 
 class Lesson(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование занятия",)
@@ -124,6 +144,9 @@ class Lesson(models.Model):
     def __str__(self):
         return '{0} - {1}'.format(self.discipline, self.name)
 
+    def is_group_plan(self, group):
+        return group.grouplesson.all().filter(start__isnull=False, lesson=self)
+
     class Meta:
         verbose_name = _("Занятие")
         verbose_name_plural = _("Занятия")
@@ -133,14 +156,15 @@ class Group(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование группы", )
     course = models.ForeignKey(Course, verbose_name="Курс", related_name='group', on_delete=models.CASCADE)
     students = models.ManyToManyField(User, verbose_name="Учащиеся", related_name='stud_user', blank=True)
-    requests = models.ManyToManyField(User, verbose_name="Заявки на зачисление", related_name='request_user', blank=True)
+    requests = models.ManyToManyField(User, verbose_name="Заявки на зачисление",
+                                      related_name='request_user', blank=True)
     max_users = models.PositiveIntegerField(default=30, verbose_name="Максимальное количество учащихся", )
     study_start = models.DateField(verbose_name="Дата начала обучения")
     study_end = models.DateField(verbose_name="Дата конца обучения")
 
     def get_status(self):
         now = datetime.date.today()
-        if self.study_start < now and now < self.study_end:
+        if self.study_start <= now and now <= self.study_end:
             return "Ведется обучение"
         elif now < self.study_start:
             return "Ведется набор"
@@ -153,6 +177,9 @@ class Group(models.Model):
                 self.students.add(User.objects.get(pk=int(key)))
             self.requests.remove(User.objects.get(pk=int(key)))
 
+    def is_full(self):
+        return self.max_users <= self.requests.count() + self.students.count()
+
     def __str__(self):
         return '{0} - {1}'.format(self.name, self.course)
 
@@ -162,24 +189,32 @@ class Group(models.Model):
 
 
 class Test(models.Model):
-    lesson = models.ForeignKey(Lesson, default=1, related_name='task', on_delete=models.CASCADE, verbose_name="Занятие", )
-    name = models.CharField(max_length=256, default="1", verbose_name="Наименование задания", )
+    lesson = models.ForeignKey(Lesson, related_name='test', on_delete=models.CASCADE, verbose_name="Занятие", )
+    name = models.CharField(max_length=256, verbose_name="Наименование задания", )
     tryes = models.PositiveIntegerField(default=3, verbose_name="Количество попыток")
-    pass_percent = models.PositiveIntegerField(default=60, validators=[MinValueValidator(10),MaxValueValidator(100)],
+    pass_percent = models.PositiveIntegerField(default=60, validators=[MinValueValidator(10),
+                                                                       MaxValueValidator(100)],
                                                verbose_name="Мин. процент")
     time = models.PositiveIntegerField(default="5", verbose_name="Время на тест", )
 
     def __str__(self):
         return self.name
 
+    def is_passed(self, user):
+        for result in self.resulttest.filter(user=user, test=self):
+            if result.get_percent() > self.pass_percent:
+                return True
+        return False
+
     class Meta:
         verbose_name = _("Тест")
         verbose_name_plural = _("Тесты")
 
 
+
 class Question(models.Model):
     text = tinymce_models.HTMLField(blank=True, default='', verbose_name="Вопрос", )
-    test = models.ForeignKey(Test, on_delete=models.CASCADE)
+    test = models.ForeignKey(Test, related_name='question', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.text
@@ -198,11 +233,10 @@ class Question(models.Model):
         return answers
 
 
-
 class Answer(models.Model):
     text = models.CharField(max_length=256, verbose_name="Ответ")
     question = models.ForeignKey(Question, related_name='answer', on_delete=models.CASCADE,
-                                 verbose_name="Название вопроса",)
+                                 verbose_name="Название вопроса")
     correct = models.BooleanField(default=False, verbose_name="Верный ответ",)
 
     def __str__(self):
@@ -213,15 +247,13 @@ class Answer(models.Model):
         verbose_name_plural = _("Ответы")
 
 
-
-
 class ResultTest(models.Model):
     test = models.ForeignKey(Test, related_name='resulttest',
                              on_delete=models.CASCADE, verbose_name="Тест", )
     user = models.ForeignKey(User, related_name='resulttest',
                              on_delete=models.CASCADE, verbose_name="Учащийся", )
-    time = models.TimeField(verbose_name="Затраченное время", null=True, blank=True, )
-    start_time = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
+    start_time = models.DateTimeField(verbose_name="Время начала теста", default=datetime.datetime.now())
+    end_time = models.DateTimeField(verbose_name="Время завершения теста", null=True, blank=True, )
 
     def __str__(self):
         return "{0} - {1} {2} {3}".format(self.test.name, self.user.first_name,
@@ -230,6 +262,10 @@ class ResultTest(models.Model):
     class Meta:
         verbose_name = _("Результат теста")
         verbose_name_plural = _("Результаты тестов")
+
+    def get_time(self):
+        return (self.end_time - datetime.timedelta(hours=self.start_time.hour, minutes=self.start_time.minute,
+                                                   seconds=self.start_time.second)).time()
 
     def get_percent(self):
         questions_count = self.resultquestion.all().count()
@@ -241,7 +277,7 @@ class ResultTest(models.Model):
                     flag = False
                     break
             if flag:
-                points+=1
+                points += 1
         return round((points / questions_count) * 100, 1)
 
     def get_user_group(self):
@@ -251,11 +287,9 @@ class ResultTest(models.Model):
         return intercept.first().name
 
 
-
-
 class ResultQuestion(models.Model):
     text = tinymce_models.HTMLField(blank=True, default='', verbose_name="Вопрос", )
-    test = models.ForeignKey(ResultTest, related_name='resultquestion',on_delete=models.CASCADE)
+    test = models.ForeignKey(ResultTest, related_name='resultquestion', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.text
@@ -280,27 +314,96 @@ class ResultAnswer(models.Model):
         verbose_name_plural = _("Результат ответов")
 
 
-class GroupLesson(models.Model):
-    lesson = models.ForeignKey(Test, verbose_name="Занятие", related_name='grouplesson', on_delete=models.CASCADE)
+class GroupPlan(models.Model):
+    # Расписание занятий
+    lesson = models.ForeignKey(Lesson, verbose_name="Занятие", related_name='grouplesson', on_delete=models.CASCADE)
     group = models.ForeignKey(Group, verbose_name="Группа", related_name='grouplesson', on_delete=models.CASCADE)
-    start = models.DateTimeField(verbose_name="Время начала занятия", default=datetime.datetime.now())
+    start = models.DateTimeField(verbose_name="Время начала занятия", blank=True, null=True)
 
 
 class GroupTest(models.Model):
+    # Время активности тестовых заданий для групп
     test = models.ForeignKey(Test, verbose_name="Тест", related_name='grouptest', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, verbose_name="Группа", related_name='grouptest', on_delete=models.CASCADE)
-    start = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
-    end = models.DateTimeField(verbose_name="Время конца контроля")
+    group = models.ForeignKey(Group, verbose_name="Группа", default="", related_name='grouptest',
+                              on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала контроля", blank=True, null=True)
+    end = models.DateTimeField(verbose_name="Время конца контроля", blank=True, null=True)
+
+    def check_datetimes(self):
+        if self.start and self.end:
+            if self.start > self.end:
+                self.start, self.end = self.end, self.start
+
+    def in_timerange(self):
+        if self.start <= timezone.now() <= self.end:
+            return True
+        return False
 
 
+class FileTask(models.Model):
+    name = models.CharField(max_length=128, verbose_name="Наименование задания", )
+    description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание задания", )
+    lesson = models.ForeignKey(Lesson, verbose_name="Занятие", related_name='filetask', on_delete=models.CASCADE)
+    filetypes = models.CharField(verbose_name="Тип файла", max_length=20, choices=FILE_CHOISE_EXTENSIONS,)
 
-'''
-class GroupTask(models.Model):
+    def is_passed(self, user):
+        result = self.resultfile.filter(user=user, filetask=self).first()
+        if result == None or result.accepted == False:
+            return "Не пройден"
+        elif result.accepted == None:
+            return "Отправлен на оценку"
+        return "Пройден"
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
-    group = models.ForeignKey(Group, verbose_name="Группа", related_name='group', on_delete=models.CASCADE)
-    start = models.DateTimeField(verbose_name="Время начала контроля", default=datetime.datetime.now())
-    end = models.DateTimeField(verbose_name="Время конца контроля")
-'''
+
+def upload_file(instance, filename):
+    return 'uploads/studworks/{0}/{1}/{2}/{3}/{4}'.format(instance.user.username,
+                                                          instance.filetask.lesson.discipline.course.name,
+                                                          instance.filetask.lesson.discipline.name,
+                                                          instance.filetask.lesson.name,
+                                                          instance.filetask.name)
+
+
+class ResultFile(models.Model):
+    filetask = models.ForeignKey(FileTask, verbose_name="Задание", related_name='resultfile', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='resultfile',
+                             on_delete=models.CASCADE, verbose_name="Учащийся", )
+    file = models.FileField(verbose_name="Решение", upload_to=upload_file)
+    accepted = models.BooleanField(verbose_name="Зачтен", default=None, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            old_self = ResultFile.objects.get(pk=self.pk)
+            if old_self.file and self.file != old_self.file:
+                old_self.file.delete(False)
+        return super().save(*args, **kwargs)
+
+    def get_user_group(self):
+        if self.user.is_staff:
+            return "Администратор"
+        intercept = self.user.stud_user.all() & self.filetask.lesson.discipline.course.group.all()
+        return intercept.first().name
+
+
+@receiver(pre_delete, sender=ResultFile)
+def file_delete(sender, instance, **kwargs):
+    if instance.file.name:
+        instance.file.delete(False)
+
+
+class GroupFile(models.Model):
+    # Время активности файловых заданий для групп
+    file = models.ForeignKey(FileTask, verbose_name="Задание", related_name='groupfile', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, verbose_name="Группа", default="", related_name='groupfile',
+                              on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала контроля", blank=True, null=True)
+    end = models.DateTimeField(verbose_name="Время конца контроля", blank=True, null=True)
+
+    def check_datetimes(self):
+        if self.start and self.end:
+            if self.start > self.end:
+                self.start, self.end = self.end, self.start
+
+    def in_timerange(self):
+        if self.start <= timezone.now() <= self.end:
+            return True
+        return False

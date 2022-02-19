@@ -1,29 +1,24 @@
-from datetime import datetime, timedelta, time
-from time import gmtime
+from datetime import datetime, timedelta
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
 
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 
 # Create your views here.
 from django.urls import reverse
-from django.utils import timezone
+from django.utils.timezone import make_aware
 from django.views import View
-from django.views.generic import TemplateView, DetailView, UpdateView, ListView, CreateView
-from pytz import utc
+from django.views.generic import TemplateView, DetailView, UpdateView, CreateView
 
 from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm, DisciplineAddForm, \
-    LessonAddForm, TestAddForm, QuestionAddForm, AnswerAddForm, DirectionAddForm
-from control.models import Course, Discipline, Group, Lesson, Test, Question, Answer, Direction, GroupTest, ResultTest, \
-    ResultQuestion, ResultAnswer
-
-from filebrowser.sites import site
-
-from study_control import settings
+    LessonAddForm, TestAddForm, QuestionAddForm, DirectionAddForm, AnswerFormSet, FileTaskAddForm, ResultFileAddForm
+from control.models import Course, Discipline, Group, Lesson, Test, Question, Answer, Direction, GroupTest, \
+    ResultTest, ResultQuestion, ResultAnswer, GroupPlan, FileTask, ResultFile, GroupFile
 
 
 class Index(TemplateView):
@@ -32,8 +27,12 @@ class Index(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['all_courses'] = Course.objects.all()
-        a_groups = Group.objects.all().filter(study_start__gt=datetime.now()).values('course').distinct()
+        a_groups = Group.objects.filter(study_start__gt=datetime.now()).values('course').distinct()
         context['avaible_courses'] = context['all_courses'].filter(id__in=a_groups)
+        if self.request.user.is_authenticated:
+            my_groups = Group.objects.filter(study_end__gt=datetime.now()).values('course').distinct().filter(
+                students=self.request.user.id)
+            context['my_courses'] = context['all_courses'].filter(id__in=my_groups)
         context['directions'] = Direction.objects.all()
         return context
 
@@ -41,7 +40,7 @@ class Index(TemplateView):
 class Registration(View):
 
     def post(self, request):
-        reg_form = RegistrationForm(request.POST)
+        reg_form = RegistrationForm(request.GET or None)
         if reg_form.is_valid():
             username = reg_form.cleaned_data.get('username')
             password = reg_form.cleaned_data.get('password')
@@ -72,7 +71,7 @@ class Login(View):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                messages.info(request, f"{username}, здравствуйте!")
+                messages.info(request, f"{user.first_name}, здравствуйте!")
                 return redirect("index")
             else:
                 messages.error(request, "Неверный логин или пароль.")
@@ -119,7 +118,7 @@ class UserAdmin(TemplateView):
 class UserAdd(View):
 
     def post(self, request):
-        reg_form = RegistrationForm(request.POST)
+        reg_form = RegistrationForm(request.POST or None)
         if reg_form.is_valid():
             reg_form.save()
             messages.error(request, "Пользователь успешно добавлен.")
@@ -148,8 +147,7 @@ class UserEdit(View):
             profile_form = ProfileForm(instance=request.user.profile)
         return render(request, 'control/settings/edit/profile_edit.html', {
                       'user_form': user_form,
-                      'profile_form': profile_form
-    })
+                      'profile_form': profile_form})
 
     def post(self, request, *args, **kwargs):
         if request.user.is_staff:
@@ -197,18 +195,18 @@ class DirectionAdmin(TemplateView):
 class DirectionAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = DirectionAddForm(request.POST)
-        return render(request, 'control/settings/edit/direction_edit.html', {'form': form,})
+        form = DirectionAddForm(request.GET or None)
+        return render(request, 'control/settings/edit/direction_edit.html', {'form': form, })
 
     def post(self, request, *args, **kwargs):
         form = DirectionAddForm(request.POST)
         if form.is_valid():
-            f = form.save()
+            form.save()
             messages.error(request, "Направление создано.")
             return redirect('settings_directions')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/direction_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/direction_edit.html', {'form': form, })
 
 
 class DirectionEdit(UpdateView):
@@ -233,6 +231,7 @@ class CourseAdmin(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         context['courses'] = Course.objects.all()
         return context
 
@@ -244,14 +243,17 @@ class CourseDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['groups'] = context['course'].group.all().filter(study_start__gt=datetime.now())
+        if self.request.user.is_authenticated:
+            if self.object.studied_user(self.request.user):
+                context['user_group'] = self.request.user.stud_user.filter(course=self.object).first()
         return context
 
 
 class CourseAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = CourseForm(request.POST)
-        return render(request, 'control/settings/edit/course_edit.html', {'form': form,})
+        form = CourseForm(request.GET or None)
+        return render(request, 'control/settings/edit/course_edit.html', {'form': form, })
 
     def post(self, request, *args, **kwargs):
         form = CourseForm(request.POST, request.FILES)
@@ -261,7 +263,7 @@ class CourseAdd(View):
             return redirect('settings_courses')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/course_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/course_edit.html', {'form': form, })
 
 
 class CourseEdit(UpdateView):
@@ -278,15 +280,21 @@ class GroupAdmin(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['groups'] = Group.objects.all()
+        if self.request.user.is_superuser:
+            context['groups'] = Group.objects.all()
+        else:
+            context['groups'] = Group.objects.all().filter(Q(course__discipline__teacher=self.request.user) |
+                                                           Q(course__owner=self.request.user))
         return context
 
 
 class GroupAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = GroupAddForm(request.POST)
-        return render(request, 'control/settings/edit/group_edit.html', {'form': form,})
+        form = GroupAddForm(request.GET or None)
+        if not self.request.user.is_superuser:
+            form.fields['course'].queryset = Course.objects.all().filter(owner=request.user)
+        return render(request, 'control/settings/edit/group_edit.html', {'form': form, })
 
     def post(self, request, *args, **kwargs):
         form = GroupAddForm(request.POST)
@@ -296,13 +304,19 @@ class GroupAdd(View):
             return redirect('settings_groups')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/group_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/group_edit.html', {'form': form, })
 
 
 class GroupEdit(UpdateView):
     model = Group
     template_name = 'control/settings/edit/group_edit.html'
     form_class = GroupAddForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_superuser:
+            context['form'].fields['course'].queryset = Course.objects.all().filter(owner=self.request.user)
+        return context
 
     def get_success_url(self):
         return reverse('settings_groups', args=None)
@@ -317,7 +331,6 @@ class GroupRequests(View):
     def post(self, request, *args, **kwargs):
         group = Group.objects.get(pk=kwargs['pk'])
         data = request.POST.copy()
-        data.pop('csrfmiddlewaretoken')
         group.add_students(data.dict())
         return redirect('settings_groups')
 
@@ -326,7 +339,6 @@ class GroupStudents(View):
     # Результаты обучения и меры
     def get(self, request, *args, **kwargs):
         group = Group.objects.get(pk=kwargs['pk'])
-        i = User.objects.get(pk=1)
         return render(request, 'control/settings/edit/group_students.html', {'group': group, })
 
     def post(self, request, *args, **kwargs):
@@ -350,15 +362,23 @@ class DisciplineAdmin(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['disciplines'] = Discipline.objects.all()
+        if self.request.user.is_superuser:
+            context['disciplines'] = Discipline.objects.all()
+        else:
+            owner = Discipline.objects.all().filter(course__owner=self.request.user).count() > 0
+            context['disciplines'] = Discipline.objects.all().filter(Q(teacher=self.request.user) |
+                                                                     Q(course__owner=self.request.user))
+            context['owner'] = owner
         return context
 
 
 class DisciplineAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = DisciplineAddForm(request.POST)
-        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form,})
+        form = DisciplineAddForm(request.GET or None)
+        if not request.user.is_superuser:
+            form.fields['course'].queryset = Course.objects.filter(owner=request.user)
+        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form, })
 
     def post(self, request, *args, **kwargs):
         form = DisciplineAddForm(request.POST)
@@ -368,13 +388,19 @@ class DisciplineAdd(View):
             return redirect('settings_disciplines')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/discipline_edit.html', {'form': form, })
 
 
 class DisciplineEdit(UpdateView):
     model = Discipline
     template_name = 'control/settings/edit/discipline_edit.html'
     form_class = DisciplineAddForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_superuser:
+            context['form'].fields['course'].queryset = Course.objects.filter(owner=self.request.user)
+        return context
 
     def get_success_url(self):
         return reverse('settings_disciplines', args=None)
@@ -386,7 +412,12 @@ class LessonDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['tests'] = Test.objects.all().filter(lesson=context['lesson'].id)
+        context['user_group'] = self.request.user.stud_user.filter(course=self.object.discipline.course).first()
+        context['group_test'] = GroupTest.objects.all().filter(group=context['user_group'], start__isnull=False,
+                                                               end__isnull=False, test__in=context['lesson'].test.all())
+        context['group_file'] = GroupFile.objects.all().filter(group=context['user_group'], start__isnull=False,
+                                                               end__isnull=False, file__in=context['lesson'].filetask.all())
+
         return context
 
 
@@ -395,31 +426,45 @@ class LessonAdmin(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['lessons'] = Lesson.objects.all()
+        if self.request.user.is_superuser:
+            context['lessons'] = Lesson.objects.all()
+        else:
+            context['lessons'] = Lesson.objects.all().filter(Q(discipline__teacher=self.request.user) |
+                                                             Q(discipline__course__owner=self.request.user))
+
         return context
 
 
 class LessonAdd(View):
 
     def get(self, request, *args, **kwargs):
-        form = LessonAddForm(request.POST)
-        return render(request, 'control/settings/edit/lesson_edit.html', {'form': form,})
+        form = LessonAddForm(request.GET or None)
+        if not request.user.is_superuser:
+            form.fields['discipline'].queryset = Discipline.objects.filter(Q(teacher=request.user) |
+                                                                           Q(course__owner=request.user))
+        return render(request, 'control/settings/edit/lesson_edit.html', {'form': form, })
 
     def post(self, request, *args, **kwargs):
         form = LessonAddForm(request.POST)
         if form.is_valid():
-            f = form.save()
+            form.save()
             messages.error(request, "Занятие создано.")
             return redirect('settings_lessons')
         else:
             messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/lesson_edit.html', {'form': form,})
+        return render(request, 'control/settings/edit/lesson_edit.html', {'form': form, })
 
 
 class LessonEdit(UpdateView):
     model = Lesson
     template_name = 'control/settings/edit/lesson_edit.html'
     form_class = LessonAddForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_superuser:
+            context['form'].fields['discipline'].queryset = Discipline.objects.filter(teacher=self.request.user)
+        return context
 
     def get_success_url(self):
         return reverse('settings_lessons', args=None)
@@ -440,6 +485,11 @@ class TestAdmin(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['tests'] = Test.objects.all()
+        if self.request.user.is_superuser:
+            context['tests'] = Test.objects.all()
+        else:
+            context['tests'] = Test.objects.all().filter(Q(lesson__discipline__teacher=self.request.user) |
+                                                         Q(lesson__discipline__course__owner=self.request.user))
         return context
 
 
@@ -447,6 +497,14 @@ class TestAdd(CreateView):
     model = Test
     form_class = TestAddForm
     template_name = 'control/settings/edit/test_edit.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_superuser:
+            context['form'].fields['lesson'].queryset = \
+                Lesson.objects.filter(Q(discipline__teacher=self.request.user) |
+                                      Q(discipline__course__owner=self.request.user))
+        return context
 
     def form_valid(self, form):
         test = form.save(commit=False)
@@ -458,14 +516,18 @@ class TestEdit(UpdateView):
     model = Test
     template_name = 'control/settings/edit/test_edit.html'
     form_class = TestAddForm
-    def get_success_url(self):
-        return reverse('settings_tests', args=None)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['questions'] = Question.objects.all().filter(test=context['object'])
-        print(context)
+        if not self.request.user.is_superuser:
+            context['form'].fields['lesson'].queryset = \
+                Lesson.objects.filter(Q(discipline__teacher=self.request.user) |
+                                      Q(discipline__course__owner=self.request.user))
         return context
+
+    def get_success_url(self):
+        return reverse('settings_tests', args=None)
 
 
 class TestDel(View):
@@ -476,91 +538,89 @@ class TestDel(View):
         return redirect('settings_tests')
 
 
-class QuestionAdd(CreateView):
-    model = Question
-    form_class = QuestionAddForm
+class QuestionAdd(View):
     template_name = 'control/settings/edit/question_edit.html'
 
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        parent = kwargs['pk']
+        question = QuestionAddForm(data=request.GET or None, initial={'test': parent})
+        formset = AnswerFormSet()
+        return render(request, self.template_name, {'form': question, "answers": formset, "parent": parent})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from django.forms import inlineformset_factory
-        context['answers'] = inlineformset_factory(Question, Answer, fields=['text', 'correct'], extra=4)
-        return context
+    def post(self, request, *args, **kwargs):
+        question = QuestionAddForm(request.POST)
+        formset = AnswerFormSet(request.POST)
+        if question.is_valid() and formset.is_valid():
+            question = question.save()
+            for form in formset:
+                if not form.cleaned_data:
+                    continue
+                answer = form.save(commit=False)
+                if form.cleaned_data.get('DELETE') or form.cleaned_data.get('text') == "":
+                    continue
+                else:
+                    answer.question = question
+                    answer.save()
+            return redirect("test_edit", pk=self.request.POST.get('next'))
 
+        messages.error(request, "Проверьте поля формы.")
+        return render(request, self.template_name, {'form': question, 'answers': formset,
+                                                    "parent": self.request.POST.get('next')})
 
 
 class QuestionEdit(UpdateView):
-    model = Test
-    template_name = 'control/settings/edit/test_edit.html'
-    form_class = TestAddForm
-    def get_success_url(self):
-        return reverse('settings_tests', args=None)
-
-
-class QuestionDel(View):
-    def post(self, request, *args, **kwargs):
-        if request.user.is_staff:
-            question = Question.objects.get(pk=request.POST['pkq'])
-            question.delete()
-        return redirect('test_edit', pk=kwargs['pk'])
-
-
-class GroupTestAdmin(TemplateView):
-    template_name = 'control/settings/group_test.html'
-
-    def get(self, request, *args, **kwargs):
-        print()
-        self.group_pk = request.POST['group_pk']
-        return super().get(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        return self.get(request, args, kwargs)
+    model = Question
+    template_name = 'control/settings/edit/question_edit.html'
+    form_class = QuestionAddForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['group_test'] = GroupTest.objects.all().filter(group=self.group_pk)
+        context['answers'] = AnswerFormSet(initial=self.object.answer.all().values())
+        context['parent'] = self.object.test.pk
         return context
 
+    def post(self, request, *args, **kwargs):
+        question = Question.objects.get(pk=self.kwargs['pk'])
+        question_form = QuestionAddForm(request.POST)
+        formset = AnswerFormSet(request.POST)
+
+        if question_form.is_valid() and formset.is_valid():
+            question.text = question_form.cleaned_data.get('text')
+            question.save()
+            for form in formset:
+                if not form.cleaned_data:
+                    continue
+                print(form.cleaned_data)
+                answer = form.save(commit=False)
+                if form.cleaned_data.get('id'):
+                    obj = Answer.objects.get(id=form.cleaned_data.get('id'))
+                    if form.cleaned_data.get('DELETE') or form.cleaned_data.get('text') == "":
+                        obj.delete()
+                    else:
+                        obj.text = answer.text
+                        obj.correct = answer.correct
+                        obj.save()
+                else:
+                    if form.cleaned_data.get('DELETE') or form.cleaned_data.get('text') == "":
+                        continue
+                    else:
+                        answer.question = question
+                        answer.save()
+            return redirect("test_edit", pk=self.request.POST.get('next'))
+
+        messages.error(request, "Проверьте поля формы.")
+        return render(request, self.template_name,
+                      {'form': question_form, 'answers': formset, "parent": self.request.POST.get('next')})
 
 
-class GroupTestAdd(View):
+class QuestionDel(View):
 
     def get(self, request, *args, **kwargs):
-        form = LessonAddForm(request.POST)
-        return render(request, 'control/settings/edit/group_test_edit.html', {'form': form,})
-
-    def post(self, request, *args, **kwargs):
-        form = LessonAddForm(request.POST)
-        if form.is_valid():
-            f = form.save()
-            messages.error(request, "Занятие создано.")
-            return redirect('settings_lessons')
-        else:
-            messages.error(request, "Проверьте поля формы.")
-        return render(request, 'control/settings/edit/lesson_edit.html', {'form': form,})
-
-
-class GroupTestEdit(UpdateView):
-    model = Lesson
-    template_name = 'control/settings/edit/lesson_edit.html'
-    form_class = LessonAddForm
-
-    def get_success_url(self):
-        return reverse('settings_lessons', args=None)
-
-
-class GroupTestDel(View):
-
-    def post(self, request, *args, **kwargs):
+        question = Question.objects.get(pk=kwargs['pk'])
+        test = question.test.pk
         if request.user.is_staff:
-            group = Lesson.objects.get(pk=kwargs['pk'])
-            group.delete()
-        return redirect('settings_lessons')
-
-
+            question.delete()
+        return redirect('test_edit', pk=test)
 
 
 class TestView(DetailView):
@@ -577,8 +637,13 @@ class TestView(DetailView):
         test = Test.objects.all().filter(id=test_id).first()
         user_try = request.user.resulttest.all().count() + 1
 
+        if test.is_passed(request.user):
+            messages.error(request, 'Вы уже успешно выполнили это задание - %s' % test.name)
+            return redirect(test.lesson.get_absolute_url())
+
         if test.tryes >= user_try:
-            result = ResultTest(user=request.user, test=test, start_time=datetime.now())
+            result = ResultTest(user=request.user, test=test, start_time=make_aware(datetime.now()),
+                                end_time=make_aware(datetime.now()))
             result.save()
         else:
             messages.error(request, 'Вы израсходовали все попытки - %s' % test.name)
@@ -594,8 +659,7 @@ class TestView(DetailView):
             data = dict(request.POST)
             test = Test.objects.all().filter(id=kwargs['pk']).first()
             result = ResultTest.objects.filter(user=request.user, test=test).order_by('-start_time').first()
-            result.time = str((timezone.now() - result.start_time))  # Возникает варнинг по Таймзоне
-
+            result.end_time = make_aware(datetime.now())
 
             questions = Question.objects.all().filter(test_id=kwargs['pk'])
             dictionary = {}
@@ -603,23 +667,18 @@ class TestView(DetailView):
             for question in questions:
                 q = ResultQuestion(test=result, text=question.text)
                 q.save()
-                dictionary[str(question.id)] = []
                 answers = Answer.objects.all().filter(question_id=question.id)
                 for answer in answers:
                     a = ResultAnswer(question=q, text=answer.text, correct=answer.correct)
                     a.save()
                     resultadic[str(answer.id)] = str(a.id)
-                    if answer.correct:
-                        dictionary[str(question.id)].append(str(answer.id))
-                if len(dictionary[str(question.id)]) < 1:
-                    del dictionary[str(question.id)]
-
 
             del data['question_id']
             del data['csrfmiddlewaretoken']
-            print(data)
+
             if len(data):
-                for key in dictionary.keys():
+                for key in data.keys():
+                    print(key)
                     for id_ans in data[key]:
                         ra = ResultAnswer.objects.get(pk=int(resultadic[str(id_ans)]))
                         ra.given = True
@@ -630,7 +689,6 @@ class TestView(DetailView):
             else:
                 msg = 'Тест пройден.'
             return HttpResponse(msg, content_type='text/plain')
-
 
 
 class SyncTime(View):
@@ -678,5 +736,205 @@ class TestDetailView(DetailView):
     template_name = 'control/settings/test_detail.html'
 
     def get_context_data(self, **kwargs):
-        context = super(TestDetailView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
+        context['tests'] = Test.objects.all()
+        if self.request.user.is_superuser:
+            context['tests'] = Test.objects.all()
+        else:
+            context['tests'] = Test.objects.all().filter(Q(lesson__discipline__teacher=self.request.user) |
+                                                         Q(lesson__discipline__course__owner=self.request.user))
         return context
+
+
+class FileAdmin(TemplateView):
+    template_name = 'control/settings/files.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['files'] = FileTask.objects.all()
+        if self.request.user.is_superuser:
+            context['files'] = FileTask.objects.all()
+        else:
+            context['files'] = FileTask.objects.all().filter(Q(lesson__discipline__teacher=self.request.user) |
+                                                             Q(lesson__discipline__course__owner=self.request.user))
+        return context
+
+
+class FileAdd(CreateView):
+    model = FileTask
+    form_class = FileTaskAddForm
+    template_name = 'control/settings/edit/file_edit.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_superuser:
+            context['form'].fields['lesson'].queryset = \
+                Lesson.objects.filter(Q(discipline__teacher=self.request.user) |
+                                      Q(discipline__course__owner=self.request.user))
+        return context
+
+    def form_valid(self, form):
+        file = form.save(commit=False)
+        file.save()
+        return redirect('settings_files')
+
+
+class FileEdit(UpdateView):
+    model = FileTask
+    template_name = 'control/settings/edit/file_edit.html'
+    form_class = FileTaskAddForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def get_success_url(self):
+        return reverse('settings_files', args=None)
+
+
+class FileDel(View):
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            test = FileTask.objects.get(pk=kwargs['pk'])
+            test.delete()
+        return redirect('settings_files')
+
+
+class FileResultsView(DetailView):
+    model = FileTask
+    template_name = 'control/settings/file_results.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(FileResultsView, self).get_context_data(**kwargs)
+
+        context['resultfiles'] = ResultFile.objects.all().filter(filetask=kwargs['object'])
+        return context
+
+    def post(self, request, **kwargs):
+        data = request.POST.copy()
+        data.pop('csrfmiddlewaretoken')
+        data.pop('table_length')
+        print(data)
+        for key, value in data.items():
+            result = ResultFile.objects.get(pk=key)
+            result.accepted = int(value)
+            result.save()
+        return redirect('settings_files')
+
+
+class FileDetailView(UpdateView):
+    model = ResultFile
+    template_name = 'control/settings/file_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tests'] = FileTask.objects.all()
+        if self.request.user.is_superuser:
+            context['files'] = FileTask.objects.all()
+        else:
+            context['files'] = FileTask.objects.all().filter(Q(lesson__discipline__teacher=self.request.user) |
+                                                             Q(lesson__discipline__course__owner=self.request.user))
+        return context
+
+
+class FileView(View):
+
+    def get(self, request, *args, **kwargs):
+        object = FileTask.objects.get(pk=self.kwargs['pk'])
+        result = ResultFile.objects.filter(filetask=object, user=request.user).first()
+        if result:
+            form = ResultFileAddForm(instance=result)
+        else:
+            form = ResultFileAddForm(request.GET or None)
+        return render(request, 'control/file.html', {'form': form, 'filetask':object})
+
+    def post(self, request, *args, **kwargs):
+        object = FileTask.objects.get(pk=self.kwargs['pk'])
+        form = ResultFileAddForm(request.POST, request.FILES)
+        form.fields['filetask'].initial = object.id
+        form.fields['user'].initial = request.user.id
+        result = ResultFile.objects.filter(filetask=object, user=request.user).first()
+        if form.is_valid():
+            if result:
+                obj = form.save(commit=False)
+                result.file = obj.file
+            else:
+                result = form.save(commit=False)
+                result.filetask = object
+                result.user = request.user
+            result.accepted = None
+            result.save()
+            messages.error(request, "Ответ сохранен")
+            return redirect('lesson', slug=object.lesson.discipline.course.slug, pk=object.lesson.id )
+        else:
+            print(form.errors)
+            messages.error(request, "Проверьте поля формы.")
+        return render(request, 'control/file.html', {'form': form, })
+
+
+class GroupSPlan(DetailView):
+    model = Group
+    template_name = 'control/settings/group_plan.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(GroupSPlan, self).get_context_data(**kwargs)
+
+        context['group_plan'] = GroupPlan.objects.filter(group=kwargs['object'])
+        context['group_test'] = GroupTest.objects.filter(group=kwargs['object'])
+        context['group_file'] = GroupFile.objects.filter(group=kwargs['object'])
+        return context
+
+    def post(self, request, **kwargs):
+        data = dict(request.POST)
+        del data['table_length']
+        del data['csrfmiddlewaretoken']
+        group = Group.objects.get(pk=kwargs['pk'])
+        for key, dt in data.items():
+            if key.isalnum():
+                curr_datetime = self.get_date(dt[0])
+                lesson = Lesson.objects.get(pk=key)
+                lesson_plan, created = GroupPlan.objects.get_or_create(group=group, lesson=lesson)
+                lesson_plan.start = curr_datetime
+                lesson_plan.save()
+            else:
+                curr_datetime = self.get_date(dt[0])
+                info_datetime = key.split("_")
+                if info_datetime[0] == 'test':
+                    test = Test.objects.get(pk=info_datetime[2])
+                    test_plan, created = GroupTest.objects.get_or_create(group=group, test=test)
+                    if info_datetime[1] == "start":
+                        test_plan.start = curr_datetime
+                    elif info_datetime[1] == "end":
+                        test_plan.end = curr_datetime
+                    test_plan.check_datetimes()
+                    test_plan.save()
+                elif info_datetime[0] == 'file':
+                    filetask = FileTask.objects.get(pk=info_datetime[2])
+                    file_plan, created = GroupFile.objects.get_or_create(group=group, file=filetask)
+                    if info_datetime[1] == "start":
+                        file_plan.start = curr_datetime
+                    elif info_datetime[1] == "end":
+                        file_plan.end = curr_datetime
+                    file_plan.check_datetimes()
+                    file_plan.save()
+
+        return redirect('group_plan', pk=kwargs['pk'])
+
+    def get_date(self, string):
+        try:
+            return make_aware(datetime.strptime(string, '%Y-%m-%d %H:%M'))
+        except ValueError:
+            return None
+
+class GroupStatistics(DetailView):
+    model = Group
+    template_name = 'control/settings/group_statistics.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(GroupStatistics, self).get_context_data(**kwargs)
+
+        context['group_plan'] = GroupPlan.objects.filter(group=kwargs['object'])
+        context['group_test'] = GroupTest.objects.filter(group=kwargs['object'])
+        context['group_file'] = GroupFile.objects.filter(group=kwargs['object'])
+        return context
+
