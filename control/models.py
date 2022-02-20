@@ -56,7 +56,7 @@ class UserFullName(User):
 
 
 def upload_course(instance, filename):
-    return 'uploads/{0}/{1}'.format(instance, filename)
+    return 'uploads/courses/{0}/{1}'.format(instance.name, filename)
 
 
 class Direction(models.Model):
@@ -375,8 +375,16 @@ def upload_file(instance, filename):
                                                           instance.filetask.lesson.discipline.course.name,
                                                           instance.filetask.lesson.discipline.name,
                                                           instance.filetask.lesson.name,
-                                                          instance.filetask.name)
+                                                          filename)
 
+
+def validate_file_extension(value):
+    import os
+    from django.core.exceptions import ValidationError
+    ext = os.path.splitext(value.name)[1]  # [0] returns path+filename
+    valid_extensions = ['.pdf', '.doc', '.docx', '.jpg', '.png', '.xlsx', '.xls']
+    if not ext.lower() in valid_extensions:
+        raise ValidationError('Unsupported file extension.')
 
 class ResultFile(models.Model):
     filetask = models.ForeignKey(FileTask, verbose_name="Задание", related_name='resultfile', on_delete=models.CASCADE)

@@ -23,6 +23,13 @@
       <div class="col-2">
           <div class="text-right"><button type="submit" class="btn btn-primary">Отправить</button></div>
           {{ form.file|as_crispy_field }}
+          {{ form.filetask.as_hidden }}
+          <div>Разрешенные типы файлов: {{ exts }}</div>
+          {% for error in form.non_field_errors %}
+              <div class="alert alert-danger">
+                  <strong>{{ error|escape }}</strong>
+              </div>
+          {% endfor %}
       </div>
   </div>
   </form>

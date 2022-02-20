@@ -18,6 +18,7 @@ from django.views.generic import TemplateView, DetailView, UpdateView, CreateVie
 from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm, DisciplineAddForm, \
     LessonAddForm, TestAddForm, QuestionAddForm, DirectionAddForm, AnswerFormSet, FileTaskAddForm, ResultFileAddForm
 from control.models import *
+from study_control.settings import EXTENSIONS
 
 
 class Index(TemplateView):
@@ -844,16 +845,23 @@ class FileView(View):
     def get(self, request, *args, **kwargs):
         object = FileTask.objects.get(pk=self.kwargs['pk'])
         result = ResultFile.objects.filter(filetask=object, user=request.user).first()
+        exts = EXTENSIONS[object.filetypes]
+        if exts[0] == "*":
+            exts = "Любой"
+        else:
+            exts = ", ".join(exts)
         if result:
             form = ResultFileAddForm(instance=result)
         else:
             form = ResultFileAddForm(request.GET or None)
-        return render(request, 'control/file.html', {'form': form, 'filetask':object})
+        return render(request, 'control/file.html', {'form': form, 'filetask':object,
+                                                     'exts':exts})
 
     def post(self, request, *args, **kwargs):
         object = FileTask.objects.get(pk=self.kwargs['pk'])
         form = ResultFileAddForm(request.POST, request.FILES)
         form.fields['filetask'].initial = object.id
+        form.fields['filetask'].queryset = FileTask.objects.filter(pk=self.kwargs['pk'])
         form.fields['user'].initial = request.user.id
         result = ResultFile.objects.filter(filetask=object, user=request.user).first()
         if form.is_valid():

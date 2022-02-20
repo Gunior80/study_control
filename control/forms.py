@@ -1,11 +1,13 @@
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.forms import formset_factory
 from pytils.translit import slugify
 from tinymce.widgets import TinyMCE
 from control.models import Course, Profile, Group, Discipline, Lesson, Test, Question, Answer, Direction, FileTask, \
     ResultFile
+from study_control.settings import EXTENSIONS
 
 
 class RegistrationForm(UserCreationForm):
@@ -172,8 +174,21 @@ class FileTaskAddForm(forms.ModelForm):
 class ResultFileAddForm(forms.ModelForm):
     accepted = forms.BooleanField(required=False)
     user = forms.IntegerField(required=False)
-    filetask = forms.IntegerField(required=False)
 
     class Meta:
         model = ResultFile
         fields = '__all__'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        file = cleaned_data.get("file")
+        filetask = cleaned_data.get("filetask")
+        filetypes = filetask.filetypes
+        exts = EXTENSIONS[filetypes]
+        print(exts)
+        if exts[0] == "*":
+            pass
+        elif file.name.split('.')[-1] in exts:
+            pass
+        else:
+            raise ValidationError("Формат файла не соответствует требованиям.")

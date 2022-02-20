@@ -157,8 +157,8 @@ FILE_CHOISE_EXTENSIONS = (
 EXTENSIONS = {
     '1': ["*", ],
 
-    '2': ['.apng', '.avif', '.gif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp',
-        '.png', '.svg', '.webp', '.bmp', '.ico', '.cur', '.tif', '.tiff', ],
+    '2': ['png', 'avif', 'gif', 'jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp',
+          'png', 'svg', 'webp', 'bmp', 'ico', 'cur', 'tif', 'tiff', ],
 
-    '3': ['.doc', '.docx', '.txt', '.ppt', '.pptx', '.odt', '.pdf', '.xls', '.xlsx'],
+    '3': ['doc', 'docx', 'txt', 'ppt', 'pptx', 'odt', 'pdf', 'xls', 'xlsx'],
 }
