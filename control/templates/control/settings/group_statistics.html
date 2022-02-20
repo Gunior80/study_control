@@ -15,25 +15,50 @@
       <br/>
       {% for user in group.students.all %}
       <h3>{{ user.last_name }} {{ user.first_name }} {{ user.profile.patronymic }}</h3>
-      <table id="table" class="table table-striped table-bordered sortable ">
+      <table class="table table-striped sortable ">
         <thead>
           <tr>
             <th class="th-sm text-center">Дисциплина</th>
             <th class="th-sm text-center">Занятие</th>
             <th class="th-sm text-center">Задание</th>
-            <th class="th-sm text-center">Результат</th>
           </tr>
         </thead>
         <tbody>
             {% for discipline in group.course.discipline.all %}
-                {% for lesson in discipline.lesson.all %}
-                    <tr>
-                      <td class="text-center">{{ discipline }}</td>
-                      <td class="text-center">{{ lesson }}</td>
-                      <td class="text-center"></td>
-                      <td class="text-center"></td>
-                    </tr>
-                {% endfor %}
+                {% if discipline|in_plan:group %}
+                    {% for lesson in discipline.lesson.all %}
+                        {% if lesson|in_plan:group %}
+                            <tr>
+                              <td class="text-center">{{ discipline.name }}</td>
+                              <td class="text-center">{{ lesson.name }}</td>
+                              <td class="text-center">
+                                  <div>
+                                  {% for test in lesson.test.all %}
+                                     {% if test|in_plan:group %}
+                                        {% if test|is_passed:user %}
+                                            {{ test.name }} - Пройден
+                                        {% else %}
+                                            {{ test.name }} - Не пройден
+                                        {% endif %}
+                                     {% endif %}
+                                  {% endfor %}
+                                  </div>
+                                  <div>
+                                  {% for file in lesson.filetask.all %}
+                                     {% if file|in_plan:group %}
+                                        {% if file|is_passed:user %}
+                                            {{ file.name }} - Пройден
+                                        {% else %}
+                                            {{ file.name }} - Не пройден {{ file|is_sended:user }}
+                                        {% endif %}
+                                     {% endif %}
+                                  {% endfor %}
+                                  </div>
+                              </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             {% endfor %}
         </tbody>
         <tfoot>
@@ -41,7 +66,6 @@
             <th class="th-sm text-center">Дисциплина</th>
             <th class="th-sm text-center">Занятие</th>
             <th class="th-sm text-center">Задание</th>
-            <th class="th-sm text-center">Результат</th>
           </tr>
         </tfoot>
       </table>

@@ -29,6 +29,12 @@ class Profile(models.Model):
         verbose_name = _("Пользователь")
         verbose_name_plural = _("Пользователи")
 
+    def is_study(self, course):
+        return Group.objects.filter(course=course, study_end__gte=timezone.now(), students=self.user).first()
+
+    def is_request(self, course):
+        return Group.objects.filter(course=course, study_start__gte=timezone.now(), requests=self.user).first()
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -95,8 +101,6 @@ class Course(models.Model):
                 old_self.image.delete(False)
         return super().save(*args, **kwargs)
 
-    def studied_user(self,user):
-        return self.group.filter(students=user).exists()
 
     def is_owner(self, user):
         return self.owner == user
@@ -118,8 +122,13 @@ class Discipline(models.Model):
     def __str__(self):
         return self.name
 
-    def is_group_plan(self, group):
-        return group.grouplesson.all().filter(start__isnull=False, lesson__in=self.lesson.all()).count()
+    def in_plan(self, group):
+        for lesson in self.lesson.all():
+            plan = lesson.get_plan(group)
+            if plan:
+                if plan.start:
+                    return True
+        return False
 
     def is_teacher(self, user):
         return self.teacher == user
@@ -128,9 +137,6 @@ class Discipline(models.Model):
         verbose_name = _("Дисциплина")
         verbose_name_plural = _("Дисциплины")
 
-class LessonInGroup(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(groupplan__lesson='Roald Dahl')
 
 class Lesson(models.Model):
     name = models.CharField(max_length=256, verbose_name="Наименование занятия",)
@@ -144,8 +150,16 @@ class Lesson(models.Model):
     def __str__(self):
         return '{0} - {1}'.format(self.discipline, self.name)
 
-    def is_group_plan(self, group):
-        return group.grouplesson.all().filter(start__isnull=False, lesson=self)
+    def in_plan(self, group):
+        plan = self.get_plan(group)
+        if plan:
+            if plan.start:
+                return True
+        return False
+
+    def get_plan(self, group):
+        return LessonPlan.objects.filter(lesson=self, group=group).first()
+
 
     class Meta:
         verbose_name = _("Занятие")
@@ -203,6 +217,16 @@ class Test(models.Model):
     def is_passed(self, user):
         for result in self.resulttest.filter(user=user, test=self):
             if result.get_percent() > self.pass_percent:
+                return True
+        return False
+
+    def get_plan(self, group):
+        return TestPlan.objects.filter(lessonplan=self.lesson.get_plan(group=group)).first()
+
+    def in_plan(self, group):
+        plan = TestPlan.objects.filter(test=self, lessonplan__group=group).first()
+        if plan:
+            if plan.lessonplan.start and plan.start and plan.end:
                 return True
         return False
 
@@ -278,7 +302,11 @@ class ResultTest(models.Model):
                     break
             if flag:
                 points += 1
-        return round((points / questions_count) * 100, 1)
+        try:
+            return round((points / questions_count) * 100, 1)
+        except:
+            return 0
+
 
     def get_user_group(self):
         if self.user.is_staff:
@@ -314,46 +342,33 @@ class ResultAnswer(models.Model):
         verbose_name_plural = _("Результат ответов")
 
 
-class GroupPlan(models.Model):
-    # Расписание занятий
-    lesson = models.ForeignKey(Lesson, verbose_name="Занятие", related_name='grouplesson', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, verbose_name="Группа", related_name='grouplesson', on_delete=models.CASCADE)
-    start = models.DateTimeField(verbose_name="Время начала занятия", blank=True, null=True)
-
-
-class GroupTest(models.Model):
-    # Время активности тестовых заданий для групп
-    test = models.ForeignKey(Test, verbose_name="Тест", related_name='grouptest', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, verbose_name="Группа", default="", related_name='grouptest',
-                              on_delete=models.CASCADE)
-    start = models.DateTimeField(verbose_name="Время начала контроля", blank=True, null=True)
-    end = models.DateTimeField(verbose_name="Время конца контроля", blank=True, null=True)
-
-    def check_datetimes(self):
-        if self.start and self.end:
-            if self.start > self.end:
-                self.start, self.end = self.end, self.start
-
-    def in_timerange(self):
-        if self.start <= timezone.now() <= self.end:
-            return True
-        return False
-
-
 class FileTask(models.Model):
     name = models.CharField(max_length=128, verbose_name="Наименование задания", )
     description = tinymce_models.HTMLField(blank=True, default='', verbose_name="Описание задания", )
     lesson = models.ForeignKey(Lesson, verbose_name="Занятие", related_name='filetask', on_delete=models.CASCADE)
     filetypes = models.CharField(verbose_name="Тип файла", max_length=20, choices=FILE_CHOISE_EXTENSIONS,)
 
+    def is_sended(self, user):
+        result = self.resultfile.filter(user=user, filetask=self).first()
+        if result and result.accepted == None:
+            return "(Отправлен на оценку)"
+        return ""
+
     def is_passed(self, user):
         result = self.resultfile.filter(user=user, filetask=self).first()
-        if result == None or result.accepted == False:
-            return "Не пройден"
-        elif result.accepted == None:
-            return "Отправлен на оценку"
-        return "Пройден"
+        if result == None or result.accepted == False or result.accepted == None:
+            return False
+        return True
 
+    def in_plan(self, group):
+        plan = FilePlan.objects.filter(file=self, lessonplan__group=group).first()
+        if plan:
+            if plan.lessonplan.start and plan.start and plan.end:
+                return True
+        return False
+
+    def get_plan(self, group):
+        return FilePlan.objects.filter(lessonplan=self.lesson.get_plan(group=group)).first()
 
 def upload_file(instance, filename):
     return 'uploads/studworks/{0}/{1}/{2}/{3}/{4}'.format(instance.user.username,
@@ -390,11 +405,40 @@ def file_delete(sender, instance, **kwargs):
         instance.file.delete(False)
 
 
-class GroupFile(models.Model):
-    # Время активности файловых заданий для групп
-    file = models.ForeignKey(FileTask, verbose_name="Задание", related_name='groupfile', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, verbose_name="Группа", default="", related_name='groupfile',
+class LessonPlan(models.Model):
+    # Расписание занятий
+    lesson = models.ForeignKey(Lesson, verbose_name="Занятие", related_name='lessonplan', on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, verbose_name="Группа", related_name='lessonplan', on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала занятия", blank=True, null=True)
+
+    def __str__(self):
+        return self.lesson.discipline.name
+
+
+class TestPlan(models.Model):
+    # Время активности тестовых заданий для групп
+    test = models.ForeignKey(Test, verbose_name="Тест", related_name='testplan', on_delete=models.CASCADE)
+    lessonplan = models.ForeignKey(LessonPlan, verbose_name="Группа", default="", related_name='testplan',
                               on_delete=models.CASCADE)
+    start = models.DateTimeField(verbose_name="Время начала контроля", blank=True, null=True)
+    end = models.DateTimeField(verbose_name="Время конца контроля", blank=True, null=True)
+
+    def check_datetimes(self):
+        if self.start and self.end:
+            if self.start > self.end:
+                self.start, self.end = self.end, self.start
+
+    def in_timerange(self):
+        if self.start <= timezone.now() <= self.end:
+            return True
+        return False
+
+
+class FilePlan(models.Model):
+    # Время активности файловых заданий для групп
+    file = models.ForeignKey(FileTask, verbose_name="Задание", related_name='fileplan', on_delete=models.CASCADE)
+    lessonplan = models.ForeignKey(LessonPlan, verbose_name="Группа", default="", related_name='fileplan',
+                                   on_delete=models.CASCADE)
     start = models.DateTimeField(verbose_name="Время начала контроля", blank=True, null=True)
     end = models.DateTimeField(verbose_name="Время конца контроля", blank=True, null=True)
 

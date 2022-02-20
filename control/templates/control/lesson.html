@@ -29,27 +29,29 @@
     </div>
     <div class="col">
         <h4>Задания</h4>
-            {% for test_plan in group_test %}
+            {% for test_plan in testplans %}
                 <p>
                     {% if test_plan.test|is_passed:request.user %}
-                        Пройден -
+                        Пройден - {{ test_plan.test.name }}
                     {% else %}
-                        Не пройден -
-                    {% endif %}
-                    {% if test_plan.in_timerange %}
-                        <a href="{% url 'test' slug=lesson.discipline.course.slug pk=test_plan.test.pk %}">{{ test_plan.test.name }}</a>
-                    {% else %}
-                        {{ test_plan.test.name }} (Доступен с {{ test_plan.start }} по {{ test_plan.end }} )
+                        {% if test_plan.in_timerange %}
+                            <a href="{% url 'test' slug=lesson.discipline.course.slug pk=test_plan.test.pk %}">{{ test_plan.test.name }}</a>
+                        {% else %}
+                            {{ test_plan.test.name }} (Доступен с {{ test_plan.start }} по {{ test_plan.end }} )
+                        {% endif %}
                     {% endif %}
                 </p>
             {% endfor %}
-            {% for file_plan in group_file %}
+            {% for file_plan in fileplans %}
                 <p>
-                    {{ file_plan.file|is_accepted:request.user }} -
-                    {% if file_plan.in_timerange %} -
-                        <a href="{% url 'file' slug=lesson.discipline.course.slug pk=file_plan.file.pk %}">{{ file_plan.file.name }}</a>
+                    {% if file_plan.file|is_passed:request.user %}
+                        Пройден - {{ file_plan.file.name }}
                     {% else %}
+                        {% if file_plan.in_timerange %}
+                            <a href="{% url 'file' slug=lesson.discipline.course.slug pk=file_plan.file.pk %}">{{ file_plan.file|is_sended:request.user }} {{ file_plan.file.name }}</a>
+                        {% else %}
                         {{ file_plan.file.name }} (Доступен с {{ file_plan.start }} по {{ file_plan.end }} )
+                    {% endif %}
                     {% endif %}
                 </p>
             {% endfor %}

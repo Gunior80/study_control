@@ -144,7 +144,7 @@ class AnswerAddForm(forms.ModelForm):
         ]
 
 
-AnswerFormSet = formset_factory(AnswerAddForm, extra=1, can_delete=True)
+AnswerFormSet = formset_factory(AnswerAddForm, extra=4, can_delete=True)
 
 
 class QuestionAddForm(forms.ModelForm):

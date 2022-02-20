@@ -17,8 +17,7 @@ from django.views.generic import TemplateView, DetailView, UpdateView, CreateVie
 
 from control.forms import RegistrationForm, CourseForm, EditUser, ProfileForm, GroupAddForm, DisciplineAddForm, \
     LessonAddForm, TestAddForm, QuestionAddForm, DirectionAddForm, AnswerFormSet, FileTaskAddForm, ResultFileAddForm
-from control.models import Course, Discipline, Group, Lesson, Test, Question, Answer, Direction, GroupTest, \
-    ResultTest, ResultQuestion, ResultAnswer, GroupPlan, FileTask, ResultFile, GroupFile
+from control.models import *
 
 
 class Index(TemplateView):
@@ -27,10 +26,10 @@ class Index(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['all_courses'] = Course.objects.all()
-        a_groups = Group.objects.filter(study_start__gt=datetime.now()).values('course').distinct()
+        a_groups = Group.objects.filter(study_start__gt=timezone.now()).values('course').distinct()
         context['avaible_courses'] = context['all_courses'].filter(id__in=a_groups)
         if self.request.user.is_authenticated:
-            my_groups = Group.objects.filter(study_end__gt=datetime.now()).values('course').distinct().filter(
+            my_groups = Group.objects.filter(study_end__gt=timezone.now()).values('course').distinct().filter(
                 students=self.request.user.id)
             context['my_courses'] = context['all_courses'].filter(id__in=my_groups)
         context['directions'] = Direction.objects.all()
@@ -40,7 +39,7 @@ class Index(TemplateView):
 class Registration(View):
 
     def post(self, request):
-        reg_form = RegistrationForm(request.GET or None)
+        reg_form = RegistrationForm(request.POST)
         if reg_form.is_valid():
             username = reg_form.cleaned_data.get('username')
             password = reg_form.cleaned_data.get('password')
@@ -55,7 +54,7 @@ class Registration(View):
             })
 
     def get(self, request):
-        reg_form = RegistrationForm()
+        reg_form = RegistrationForm(request.GET or None)
         return render(request, 'control/registration.html', {
             'reg_form': reg_form,
         })
@@ -242,10 +241,10 @@ class CourseDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['groups'] = context['course'].group.all().filter(study_start__gt=datetime.now())
+        context['groups'] = context['course'].group.all().filter(study_start__gt=timezone.now())
         if self.request.user.is_authenticated:
-            if self.object.studied_user(self.request.user):
-                context['user_group'] = self.request.user.stud_user.filter(course=self.object).first()
+            context['is_student'] = self.request.user.profile.is_study(self.object)
+            context['is_request'] = self.request.user.profile.is_request(self.object)
         return context
 
 
@@ -331,6 +330,7 @@ class GroupRequests(View):
     def post(self, request, *args, **kwargs):
         group = Group.objects.get(pk=kwargs['pk'])
         data = request.POST.copy()
+        data.pop('csrfmiddlewaretoken')
         group.add_students(data.dict())
         return redirect('settings_groups')
 
@@ -412,11 +412,13 @@ class LessonDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['user_group'] = self.request.user.stud_user.filter(course=self.object.discipline.course).first()
-        context['group_test'] = GroupTest.objects.all().filter(group=context['user_group'], start__isnull=False,
-                                                               end__isnull=False, test__in=context['lesson'].test.all())
-        context['group_file'] = GroupFile.objects.all().filter(group=context['user_group'], start__isnull=False,
-                                                               end__isnull=False, file__in=context['lesson'].filetask.all())
+        group = self.request.user.profile.is_study(self.object.discipline.course)
+        context['testplans'] = self.object.get_plan(group).testplan.all().filter(start__isnull=False,
+                                                                                end__isnull=False,
+                                                                                test__in=self.object.test.all())
+        context['fileplans'] = self.object.get_plan(group).fileplan.all().filter(start__isnull=False,
+                                                                                end__isnull=False,
+                                                                                file__in=self.object.filetask.all())
 
         return context
 
@@ -642,15 +644,15 @@ class TestView(DetailView):
             return redirect(test.lesson.get_absolute_url())
 
         if test.tryes >= user_try:
-            result = ResultTest(user=request.user, test=test, start_time=make_aware(datetime.now()),
-                                end_time=make_aware(datetime.now()))
+            result = ResultTest(user=request.user, test=test, start_time=timezone.now(),
+                                end_time=timezone.now())
             result.save()
         else:
             messages.error(request, 'Вы израсходовали все попытки - %s' % test.name)
             return redirect(test.lesson.get_absolute_url())
 
         request.session['try'] = user_try
-        request.session['start_test_time'] = str(datetime.now())
+        request.session['start_test_time'] = str(datetime.datetime.now())
         request.session['test'] = str(test.id)
         return super().get(self, request, *args, **kwargs)
 
@@ -659,7 +661,7 @@ class TestView(DetailView):
             data = dict(request.POST)
             test = Test.objects.all().filter(id=kwargs['pk']).first()
             result = ResultTest.objects.filter(user=request.user, test=test).order_by('-start_time').first()
-            result.end_time = make_aware(datetime.now())
+            result.end_time = timezone.now()
 
             questions = Question.objects.all().filter(test_id=kwargs['pk'])
             dictionary = {}
@@ -698,8 +700,8 @@ class SyncTime(View):
             start_test_time = request.session.get('start_test_time')
             if start_test_time is None:
                 return HttpResponse(JsonResponse(data_response), content_type="application/json")
-            then = datetime.strptime(start_test_time, '%Y-%m-%d %H:%M:%S.%f')
-            now = datetime.now()
+            then = datetime.datetime.strptime(start_test_time, '%Y-%m-%d %H:%M:%S.%f')
+            now = datetime.datetime.now()
             delta_now = now - then
             test_id = request.session.get('test')
             if test_id is None:
@@ -878,10 +880,6 @@ class GroupSPlan(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(GroupSPlan, self).get_context_data(**kwargs)
-
-        context['group_plan'] = GroupPlan.objects.filter(group=kwargs['object'])
-        context['group_test'] = GroupTest.objects.filter(group=kwargs['object'])
-        context['group_file'] = GroupFile.objects.filter(group=kwargs['object'])
         return context
 
     def post(self, request, **kwargs):
@@ -893,36 +891,31 @@ class GroupSPlan(DetailView):
             if key.isalnum():
                 curr_datetime = self.get_date(dt[0])
                 lesson = Lesson.objects.get(pk=key)
-                lesson_plan, created = GroupPlan.objects.get_or_create(group=group, lesson=lesson)
+                lesson_plan, created = LessonPlan.objects.get_or_create(group=group, lesson=lesson)
                 lesson_plan.start = curr_datetime
                 lesson_plan.save()
             else:
                 curr_datetime = self.get_date(dt[0])
                 info_datetime = key.split("_")
                 if info_datetime[0] == 'test':
-                    test = Test.objects.get(pk=info_datetime[2])
-                    test_plan, created = GroupTest.objects.get_or_create(group=group, test=test)
-                    if info_datetime[1] == "start":
-                        test_plan.start = curr_datetime
-                    elif info_datetime[1] == "end":
-                        test_plan.end = curr_datetime
-                    test_plan.check_datetimes()
-                    test_plan.save()
+                    task = Test.objects.get(pk=info_datetime[2])
+                    task_plan, created = TestPlan.objects.get_or_create(test=task, lessonplan=task.lesson.get_plan(group))
                 elif info_datetime[0] == 'file':
-                    filetask = FileTask.objects.get(pk=info_datetime[2])
-                    file_plan, created = GroupFile.objects.get_or_create(group=group, file=filetask)
-                    if info_datetime[1] == "start":
-                        file_plan.start = curr_datetime
-                    elif info_datetime[1] == "end":
-                        file_plan.end = curr_datetime
-                    file_plan.check_datetimes()
-                    file_plan.save()
+                    task = FileTask.objects.get(pk=info_datetime[2])
+                    task_plan, created = FilePlan.objects.get_or_create(file=task, lessonplan=task.lesson.get_plan(group))
+
+                if info_datetime[1] == "start":
+                    task_plan.start = curr_datetime
+                elif info_datetime[1] == "end":
+                    task_plan.end = curr_datetime
+                task_plan.check_datetimes()
+                task_plan.save()
 
         return redirect('group_plan', pk=kwargs['pk'])
 
     def get_date(self, string):
         try:
-            return make_aware(datetime.strptime(string, '%Y-%m-%d %H:%M'))
+            return make_aware(datetime.datetime.strptime(string, '%Y-%m-%d %H:%M'))
         except ValueError:
             return None
 
@@ -933,8 +926,5 @@ class GroupStatistics(DetailView):
     def get_context_data(self, **kwargs):
         context = super(GroupStatistics, self).get_context_data(**kwargs)
 
-        context['group_plan'] = GroupPlan.objects.filter(group=kwargs['object'])
-        context['group_test'] = GroupTest.objects.filter(group=kwargs['object'])
-        context['group_file'] = GroupFile.objects.filter(group=kwargs['object'])
         return context
 

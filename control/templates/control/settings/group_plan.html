@@ -49,9 +49,9 @@
               <td>{{ lesson.name }}</td>
               <td>
                 {% if group.course|is_owner:request.user %}
-                  <input class="datetime" id="{{ lesson.id }}" name="{{ lesson.id }}" type="text" value="{{ group_plan|collide_lesson:lesson.id }}">
+                  <input class="datetime" id="{{ lesson.id }}" name="{{ lesson.id }}" type="text" value="{% plan lesson 'start' group %}">
                 {% else %}
-                  <div>{{ group_plan|collide_lesson:lesson.id }}</div>
+                  <div>{% plan lesson 'start' group %}</div>
                 {% endif %}
               </td>
               <td>
@@ -62,11 +62,11 @@
                   </div>
                   <div class="col">
                     {% if discipline|is_teacher:request.user %}
-                      <input class="datetime" id="test_start_{{ test.id }}" name="test_start_{{ test.id }}" type="text" value="{{ group_test|collide_test_start:test.id }}">
-                      <input class="datetime" id="test_end_{{ test.id }}" name="test_end_{{ test.id }}" type="text" value="{{ group_test|collide_test_end:test.id }}">
+                      <input class="datetime" id="test_start_{{ test.id }}" name="test_start_{{ test.id }}" type="text" value="{% plan test 'start' group %}">
+                      <input class="datetime" id="test_end_{{ test.id }}" name="test_end_{{ test.id }}" type="text" value="{% plan test 'end' group %}">
                     {% else %}
-                      <div>{{ group_test|collide_test_start:test.id }}</div>
-                      <div>{{ group_test|collide_test_end:test.id }}</div>
+                      <div>{% plan test 'start' group %}</div>
+                      <div>{% plan test 'end' group %}</div>
                     {% endif %}
                   </div>
                 </div>
@@ -80,11 +80,11 @@
                   </div>
                   <div class="col">
                     {% if discipline|is_teacher:request.user %}
-                      <input class="datetime" id="file_start_{{ filetask.id }}" name="file_start_{{ filetask.id }}" type="text" value="{{ group_file|collide_file_start:filetask.id }}">
-                      <input class="datetime" id="file_end_{{ filetask.id }}" name="file_end_{{ filetask.id }}" type="text" value="{{ group_file|collide_file_end:filetask.id }}">
+                      <input class="datetime" id="file_start_{{ filetask.id }}" name="file_start_{{ filetask.id }}" type="text" value="{% plan filetask 'start' group %}">
+                      <input class="datetime" id="file_end_{{ filetask.id }}" name="file_end_{{ filetask.id }}" type="text" value="{% plan filetask 'end' group %}">
                     {% else %}
-                      <div>{{ group_file|collide_file_start:filetask.id }}</div>
-                      <div>{{ group_file|collide_file_end:filetask.id }}</div>
+                      <div>{% plan filetask 'start' group %}</div>
+                      <div>{% plan filetask 'end' group %}</div>
                     {% endif %}
                   </div>
                 </div>

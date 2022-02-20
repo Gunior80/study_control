@@ -20,12 +20,12 @@
         {% endif %}
         <div class="text-center">
             <br>
-            {% if not course|studied_user:request.user %}
+            {% if not is_student or is_request %}
                 {% if groups|length > 0 %}
                     {% if request.user.is_authenticated %}
                         <h5>Текущие наборы:</h5>
                         {% for group in groups %}
-                            {% if not group.is_full or request.user in group.requests.all %}
+                            {% if not group.is_full or is_request %}
                                 <div>Дата начала</div>
                                 <div>{{ group.study_start }}</div>
                                 {% if request.user in group.requests.all %}
@@ -58,29 +58,27 @@
         {{ course.description|safe }}
     </div>
     <div class="col">
-        <h4>Содержание курса:</h4>
-        {% if not course|studied_user:request.user %}
+        {% if is_student %}
             {% for discipline in course.discipline.all %}
-            <dl>
-                <dt>{{ discipline.name }}</dt>
-                {% for lesson in discipline.lesson.all %}
-                    <dd>{{ lesson.name }}</dd>
-                {% endfor %}
-            </dl>
+                {% if discipline|in_plan:is_student %}
+                    <dl>
+                        <dt>{{ discipline.name }}</dt>
+                        {% for lesson in discipline.lesson.all %}
+                            {% if lesson|in_plan:is_student %}
+                                <dd><a class="nav-link" href="{% url 'lesson' slug=course.slug pk=lesson.id %}">{{ lesson.name }}</a></dd>
+                            {% endif %}
+                        {% endfor %}
+                    </dl>
+                {% endif %}
             {% endfor %}
         {% else %}
-            {% for discipline in course.discipline.all %}
+            <h4>Преподаватели:</h4>
             <dl>
-                {% if discipline|in_discipline_plan:user_group %}
-                    <dt>{{ discipline.name }}</dt>
-                    {% for lesson in discipline.lesson.all %}
-                        {% if lesson|in_lesson_plan:user_group %}
-                            <dd><a class="nav-link" href="{% url 'lesson' slug=course.slug pk=lesson.id %}">{{ lesson.name }}</a></dd>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
+                {% for discipline in course.discipline.all %}
+                <dt>{{ discipline.name }}</dt>
+                <dd>{{ discipline.teacher}}</dd>
+                {% endfor %}
             </dl>
-            {% endfor %}
         {% endif %}
     </div>
   </div>
