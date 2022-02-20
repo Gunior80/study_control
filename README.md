@@ -10,27 +10,27 @@ Windows - https://www.python.org
 
 Linux - из репозитория соответствующего дистрибутива
 
-    Клонируем репозиторий
+Клонируем репозиторий
 
-git clone https://github.com/Gunior80/study_control
+    git clone https://github.com/Gunior80/study_control
 
 Далее все операции выполняются из каталога приложения!
 
-    Устанавливаем зависимости:
+Устанавливаем зависимости:
 
-pip install -r requirements.txt
+    pip install -r requirements.txt
 
-    Подготавливаем базу данных к работе (по умолчанию используется sqlite)
+Подготавливаем базу данных к работе (по умолчанию используется sqlite)
 
-python manage.py makemigrations
-python manage.py migrate
+    python manage.py makemigrations
+    python manage.py migrate
 
-    Собираем статические файлы в одной директории static (обязательно для продакшена)
+Собираем статические файлы в одной директории static (обязательно для продакшена)
 
-python manage.py collectstatic
+    python manage.py collectstatic
 
-    Суперпользователь - первый зарегистрированный в приложении пользователь.
+Суперпользователь - первый зарегистрированный в приложении пользователь.
 
-    Запускаем приложения на встроенном http-сервере (по умолчанию хост-127.0.0.1 порт-8000)
+Запускаем приложения на встроенном http-сервере (по умолчанию хост-127.0.0.1 порт-8000)
 
-python manage.py runserver
+    python manage.py runserver
