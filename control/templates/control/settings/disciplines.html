@@ -32,7 +32,7 @@
             {% if request.user.is_superuser or discipline.course|is_owner:request.user %}
             <td class="text-center"><a class="btn btn-primary" href="{% url 'discipline_edit' pk=discipline.pk %}">Редактировать</a></td>
               <td class="text-center">
-                <form action="{% url 'discipline_edit' pk=discipline.pk %}" method="post">
+                <form action="{% url 'discipline_del' pk=discipline.pk %}" method="post">
                     {% csrf_token %}
                     <button class="btn btn-danger" type="submit" href="">Удалить</button>
                 </form>

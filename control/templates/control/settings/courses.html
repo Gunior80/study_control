@@ -40,7 +40,7 @@
             {% if request.user.is_superuser %}
             <td class="text-center"><a class="btn btn-primary" href="{% url 'course_edit' slug=course.slug %}">Редактировать</a></td>
             <td class="text-center">
-              <form action="{% url 'course_edit' slug=course.slug %}" method="post">
+              <form action="{% url 'course_del' slug=course.slug %}" method="post">
                   {% csrf_token %}
                   <button class="btn btn-danger" type="submit" href="">Удалить</button>
               </form>

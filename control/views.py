@@ -275,6 +275,15 @@ class CourseEdit(UpdateView):
         return reverse('settings_courses', args=None)
 
 
+class CourseDel(View):
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            course = Course.objects.get(slug=kwargs['slug'])
+            course.delete()
+        return redirect('settings_courses')
+
+
 class GroupAdmin(TemplateView):
     template_name = 'control/settings/groups.html'
 
@@ -405,6 +414,15 @@ class DisciplineEdit(UpdateView):
 
     def get_success_url(self):
         return reverse('settings_disciplines', args=None)
+
+
+class DisciplineDel(View):
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            discipline = Discipline.objects.get(pk=kwargs['pk'])
+            discipline.delete()
+        return redirect('settings_disciplines')
 
 
 class LessonDetail(DetailView):

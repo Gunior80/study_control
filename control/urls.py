@@ -48,10 +48,12 @@ urlpatterns = [
     path('settings/courses', login_required(CourseAdmin.as_view()), name='settings_courses'),
     path('settings/course/add', login_required(CourseAdd.as_view()), name='course_add'),
     path('settings/course/<slug:slug>/edit', login_required(CourseEdit.as_view()), name='course_edit'),
+    path('settings/course/<slug:slug>/del', login_required(CourseDel.as_view()), name='course_del'),
 
     path('settings/disciplines', login_required(DisciplineAdmin.as_view()), name='settings_disciplines'),
     path('settings/discipline/add', login_required(DisciplineAdd.as_view()), name='discipline_add'),
     path('settings/discipline/<int:pk>/edit', login_required(DisciplineEdit.as_view()), name='discipline_edit'),
+    path('settings/discipline/<int:pk>/del', login_required(DisciplineDel.as_view()), name='discipline_del'),
 
     path('settings/groups', login_required(GroupAdmin.as_view()), name='settings_groups'),
     path('settings/groups/add', login_required(GroupAdd.as_view()), name='group_add'),
