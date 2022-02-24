@@ -611,7 +611,6 @@ class QuestionEdit(UpdateView):
             for form in formset:
                 if not form.cleaned_data:
                     continue
-                print(form.cleaned_data)
                 answer = form.save(commit=False)
                 if form.cleaned_data.get('id'):
                     obj = Answer.objects.get(id=form.cleaned_data.get('id'))
@@ -678,28 +677,26 @@ class TestView(DetailView):
     def post(self, request, **kwargs):
         if request.POST:
             data = dict(request.POST)
+            del data['question_id']
+            del data['csrfmiddlewaretoken']
+
             test = Test.objects.all().filter(id=kwargs['pk']).first()
             result = ResultTest.objects.filter(user=request.user, test=test).order_by('-start_time').first()
             result.end_time = timezone.now()
 
             questions = Question.objects.all().filter(test_id=kwargs['pk'])
-            dictionary = {}
             resultadic = {}
             for question in questions:
                 q = ResultQuestion(test=result, text=question.text)
                 q.save()
-                answers = Answer.objects.all().filter(question_id=question.id)
+                answers = question.answer.all()
                 for answer in answers:
                     a = ResultAnswer(question=q, text=answer.text, correct=answer.correct)
                     a.save()
                     resultadic[str(answer.id)] = str(a.id)
 
-            del data['question_id']
-            del data['csrfmiddlewaretoken']
-
             if len(data):
                 for key in data.keys():
-                    print(key)
                     for id_ans in data[key]:
                         ra = ResultAnswer.objects.get(pk=int(resultadic[str(id_ans)]))
                         ra.given = True
@@ -835,7 +832,6 @@ class FileResultsView(DetailView):
         data = request.POST.copy()
         data.pop('csrfmiddlewaretoken')
         data.pop('table_length')
-        print(data)
         for key, value in data.items():
             result = ResultFile.objects.get(pk=key)
             result.accepted = int(value)
@@ -872,6 +868,8 @@ class FileView(View):
             form = ResultFileAddForm(instance=result)
         else:
             form = ResultFileAddForm(request.GET or None)
+            form.fields['filetask'].initial = object.id
+            form.fields['filetask'].queryset = FileTask.objects.filter(pk=object.id)
         return render(request, 'control/file.html', {'form': form, 'filetask':object,
                                                      'exts':exts})
 
@@ -895,7 +893,6 @@ class FileView(View):
             messages.error(request, "Ответ сохранен")
             return redirect('lesson', slug=object.lesson.discipline.course.slug, pk=object.lesson.id )
         else:
-            print(form.errors)
             messages.error(request, "Проверьте поля формы.")
         return render(request, 'control/file.html', {'form': form, })
 

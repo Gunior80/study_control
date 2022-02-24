@@ -13,7 +13,7 @@
       Наравления обучения
       <br>
       {% for direction in directions %}
-      <button   type="button" class="btn btn-primary" data-dismiss="modal" onclick='hideshow("a{{ direction.id }}")'>{{ direction.name }}</button>
+      <button class="btn btn-primary" data-dismiss="modal" onclick='hideshow("a{{ direction.id }}")'>{{ direction.name }}</button>
       {% endfor %}
     </div>
   </div>
@@ -39,7 +39,7 @@
     <div class="row">
       {% if all_courses|length > 0 %}
         {% for course in all_courses %}
-        <div class="col-md-3 col-sm-6 col-12 col-xl-3 align-items-stretch a{{course.direction.id}}">
+        <div class="col-md-3 col-sm-6 col-xl-3 align-items-stretch a{{course.direction.id}}">
           <div class="card ">
             {% if course.image %}
               <img class="card-img-top" src="{{ course.image.url }}" alt="Превью">

@@ -292,9 +292,10 @@ class ResultTest(models.Model):
                                                    seconds=self.start_time.second)).time()
 
     def get_percent(self):
-        questions_count = self.resultquestion.all().count()
+        questions = self.resultquestion.all()
+        count = questions.count()
         points = 0
-        for question in self.resultquestion.all():
+        for question in questions:
             flag = True
             for answer in question.resultanswer.all():
                 if answer.correct != answer.given:
@@ -303,7 +304,7 @@ class ResultTest(models.Model):
             if flag:
                 points += 1
         try:
-            return round((points / questions_count) * 100, 1)
+            return round((points / count) * 100, 1)
         except:
             return 0
 
@@ -371,11 +372,9 @@ class FileTask(models.Model):
         return FilePlan.objects.filter(lessonplan=self.lesson.get_plan(group=group)).first()
 
 def upload_file(instance, filename):
-    return 'uploads/studworks/{0}/{1}/{2}/{3}/{4}'.format(instance.user.username,
-                                                          instance.filetask.lesson.discipline.course.name,
-                                                          instance.filetask.lesson.discipline.name,
-                                                          instance.filetask.lesson.name,
-                                                          filename)
+    return 'uploads/studworks/{0}/{1}/{2}'.format(instance.user.username,
+                                                  instance.filetask.lesson.name,
+                                                  filename)
 
 
 def validate_file_extension(value):
